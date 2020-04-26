@@ -8,8 +8,6 @@ Each function is tested by giving it a large number of pseudorandomly generated 
 
 For the instructors in some corner case situation where the first 300 recorded test cases are not enough to explain why the student solution does not pass the checksum test, the tester script also contains a handy `discrepancy` function to find the discrepancies between the student solution and the private model solution for the instructor to debug a solution that fails the test with a checksum error.
 
-The file `ilkkaresults.txt` contains the running times of these functions for the private model solutions of the author, measured on a Mac desktop with 3.6GHz processor. Many of these problems probably allow for faster solutions.
-
 Everyone who wishes to teach or learn Python is welcome to use and adapt these problems for their own purposes as they see fit. The author welcomes feedback by email at `ilkka.kokkarinen@gmail.com` from computer science instructors who use these problems in their courses.
 
 The lab specification document and the automated tester software `tester109.py` are released under the [GNU General Public License v3](https://www.gnu.org/licenses/gpl-3.0.txt), with no warranties implied by the author.
