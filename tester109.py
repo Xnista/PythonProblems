@@ -1,7 +1,7 @@
 # Automated tester for the problems in the collection
 # "109 Python Problems for CCPS 109" by Ilkka Kokkarinen.
 
-# VERSION April 23, 2020: "Still the great 4-20 overhaul"
+# VERSION April 26, 2020
 
 # Ilkka Kokkarinen, ilkka.kokkarinen@gmail.com
 
@@ -173,7 +173,7 @@ def ryerson_letter_grade_generator():
 def is_ascending_generator(n):
     for i in range(n):
         for seq in itertools.permutations(range(n)):
-            yield [seq]
+            yield (list(seq), )
 
 def safe_squares_generator(seed):
     rng = random.Random(seed)
@@ -1544,6 +1544,9 @@ def hitting_integer_powers_generator():
         for a in range(2, b):
             yield (a, b, 10**(2 + (a+b) % 3))
 
+
+
+
 # List of test cases for the 109 functions defined.        
           
 testcases = [    
@@ -2214,11 +2217,12 @@ testcases = [
 ]
 
 try:
-    print("109 Python Problems tester, April 23, 2020, Ilkka Kokkarinen.")
+    print("109 Python Problems tester, April 26, 2020, Ilkka Kokkarinen.")
     exec(f"import {studentfile} as labs109")
 except Exception:
     print("ERROR: Unable to find file {studentfile}.py. Exiting...")
     exit(1)
+
 
 import os.path
 
