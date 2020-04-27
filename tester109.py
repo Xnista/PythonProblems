@@ -40,6 +40,25 @@ def canonize(result):
         result.sort()
     return result
 
+# When reporting an error, make sure not to flood the user console.
+    
+def emit_args(args, cutoff = 100):
+    #print('(' if type(args) == tuple else '[', end='')
+    for (i, a) in enumerate(args):
+        if i > 0:
+            print(", ", end = '')
+        if type(a) == list or type(a) == tuple:
+            if len(a) < cutoff:
+                print(a, end = '')
+            else:
+                left = ", ".join([str(x) for x in a[:5]])
+                right = ", ".join([str(x) for x in a[-5:]])     
+                print(f"[{left}, [{len(a)-10} omitted...], {right}]", end = '')
+        else:
+            print(repr(a) if len(repr(a)) < 100 else '[...]', end = '')
+    #print(')' if type(args) == tuple else ']')
+    print()
+
 # Given two implementations of the same function specification, run
 # the test cases for both of them and output the shortest test case
 # for which the two implementations disagree.
@@ -115,10 +134,11 @@ def test_one_function(f, testcases, expected = None, recorder = None, known = No
                 ok = sr.strip().startswith(should_be)
             if not ok:
                 crashed = True
-                print(f"DISCREPANCY AT TEST CASE #{count}.")
-                print(f"TEST CASE: {repr(test)[:300]})")
-                print(f"EXPECTED: <{recorded[count]}>")
-                print(f"RETURNED: <{sr}>")
+                print(f"DISCREPANCY AT TEST CASE #{count}: ")
+                print("TEST CASE: ", end ="")
+                emit_args(test)
+                print(f"EXPECTED: {should_be} {'...' if len(should_be) == 300 else ''}")
+                print(f"RETURNED: {sr}")
                 break
     if not recorder:
         totaltime = time() - starttime
