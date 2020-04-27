@@ -1,13 +1,13 @@
 # Automated tester for the problems in the collection
 # "109 Python Problems for CCPS 109" by Ilkka Kokkarinen.
 
-# VERSION April 26, 2020
+# VERSION April 27, 2020, "Uniformity and Hardness"
 
 # Ilkka Kokkarinen, ilkka.kokkarinen@gmail.com
 
 from hashlib import sha256
 from time import time
-import itertools 
+import itertools as it
 import random
 import gzip
 
@@ -15,10 +15,15 @@ import gzip
 seed = 12345
 
 # How many test cases to record in the file for each function.
-cutoff = 300
+testcase_cutoff = 300
 
 # Name of the file that contains the expected correct answers.
 recordfile = 'record'
+
+# Whether to use the recorded test results when they exist. This
+# needs to be set to false only when editing the test case
+# generator for some problem.
+use_record = True
 
 # Name of the module that contains the student solutions.
 studentfile = 'labs109'
@@ -39,28 +44,33 @@ def canonize(result):
 # the test cases for both of them and output the shortest test case
 # for which the two implementations disagree.
 
-def discrepancy(f1, f2, testcases):
+def discrepancy(teacher, student, testcases, stop_at_first = False):
     shortest, d1, d2, n, disc = None, None, None, 0, 0
     for elem in testcases:
         n += 1
         try:
-            r1 = canonize(f1(*elem))
+            r1 = canonize(teacher(*elem))
         except Exception as e:
             r1 = f"CRASH! {e}"
         try:
-            r2 = canonize(f2(*elem))
+            r2 = canonize(student(*elem))
         except Exception as e:
             r2 = f"CRASH! {e}"
         if r1 != r2:
             disc += 1
-            if shortest == None or len(str(elem)) < len(shortest):
+            if stop_at_first or shortest == None or len(str(elem)) < len(shortest):
                 shortest, d1, d2 = elem, r1, r2
+            if stop_at_first:
+                break
     if shortest == None:
         print("Both functions returned the same answers.")
         return True
     else:
-        print(f"For {n} test cases, found {disc} discrepancies.")
-        print("Shortest discrepancy input was:")
+        if stop_at_first:
+            print("First discrepancy found.")
+        else:
+            print(f"For {n} test cases, found {disc} discrepancies.")
+            print("Shortest discrepancy input was:")
         print(shortest)
         print(f"Model  : {repr(d1)}")
         print(f"Student: {repr(d2)}")
@@ -95,9 +105,9 @@ def test_one_function(f, testcases, expected = None, recorder = None, known = No
         chk.update(sr.encode('utf-8'))
         if recorder:
             print(sr.strip()[:300], file = recorder)            
-            if count >= cutoff:
+            if count >= testcase_cutoff:
                 break
-        if known and count < cutoff:
+        if use_record and known and count < testcase_cutoff:
             if recorded and not sr.strip().startswith(recorded[count]):
                 crashed = True
                 print(f"DISCREPANCY AT TEST CASE #{count}.")
@@ -164,16 +174,66 @@ def test_all_functions(module, suite, recorder = None, known = None):
         print(f"{count} out of {total} functions (of {len(suite)} possible) work.")
     return count
 
+# Some utility functions to help writing test generators.
+    
+# Produce an infinite sequence of exponentially increasing integers.
+# The parameters scale and skip determine how quickly the sequence grows.
+def scale_random(seed, scale, skip):
+    # The seed value determines the future random sequence.
+    rng = random.Random(seed)
+    curr, count, orig = 1, 0, scale
+    while True:
+        curr += rng.randint(1, scale)
+        yield curr
+        count += 1
+        if count == skip:
+            scale = scale * orig
+            count = 0
+
+# This function replaced warandpeace.txt as the source of textual data.
+# Since none of the problems that used that file were linguistic in nature,
+# there was no point using real text to test them, saving a couple of megs
+# of deadweight from this project.
+def random_text_generator(seed, n = 70):
+    rng = random.Random(seed)
+    alpha = "abcdefghijklmnopqrstuvwxyz"
+    alpha += alpha.upper()
+    punct = '.,!?'
+    for i in range(10000):
+        line = ""
+        while len(line) < n:
+            word = "".join([rng.choice(alpha) for _ in range(rng.randint(1, 20))])
+            line += " " if len(line) > 0 else ""
+            line += word
+            if rng.randint(0, 99) < 20:
+                line += rng.choice(punct)
+        yield (line, )
+        
+# Create a random n-character string from the given alphabet. 
+def random_string(alphabet, n, rng):
+    result = ''
+    for i in range(n):
+        result += rng.choice(alphabet)
+    return result
+
 # The test case generators for the individual functions.
 
 def ryerson_letter_grade_generator():
     for i in range(0, 150):
         yield (i,)
         
-def is_ascending_generator(n):
-    for i in range(n):
-        for seq in itertools.permutations(range(n)):
-            yield (list(seq), )
+def is_ascending_generator(seed):
+    rng = random.Random(seed)
+    for i in range(500):
+        for j in range(10):
+            items = [rng.randint(-(i+2), i+2)]
+            for k in range(i + 1):
+                items.append(items[-1] + rng.randint(1, 20))
+            yield (items,)
+            if i > 2:
+                for k in range(rng.randint(0, 5)):
+                    idx = rng.randint(1, len(items)-1)
+                    items[idx-1], items[idx] = items[idx], items[idx-1]
 
 def safe_squares_generator(seed):
     rng = random.Random(seed)
@@ -200,9 +260,8 @@ def rooks_with_friends_generator(seed):
             if (px, py) not in pieces:
                 pieces.append((px, py))
         fn = rng.randint(0, n)
-        pieces2 = pieces[:]
         yield (n, pieces[:fn], pieces[fn:])
-        yield (n, pieces2[fn:], pieces2[:fn])
+        yield (n, pieces[fn:], pieces[:fn])
 
 def double_until_all_digits_generator():
     for i in range(3000):
@@ -210,11 +269,16 @@ def double_until_all_digits_generator():
 
 def first_preceded_by_smaller_generator(seed):
     rng = random.Random(seed)
-    for i in range(1000):
-        len_ = rng.randint(1, 100)
-        items = [rng.randint(0, 10000) for j in range(len_)]
-        for k in range(1, len_ + 3):
-            yield (items[:], k)
+    for i in range(500):
+        for j in range(10):
+            n = rng.randint(1, 10 * (i+2))
+            items = []
+            for jj in range(n):
+                items.append(rng.randint(0, 3 * i + 1))
+            currk = 1
+            for k in range(1, 5):
+                yield (items[:], currk)
+                currk += rng.randint(1, 3)
 
 def maximum_difference_sublist_generator(seed):
     rng = random.Random(seed)
@@ -230,83 +294,62 @@ def count_and_say_generator(seed):
         bursts = rng.randint(1, 50)
         digits = ''
         for i in range(bursts):
-            len_ = rng.randint(1, 20)
-            digits += rng.choice('0123456789') * len_
+            n = rng.randint(1, 20)
+            digits += rng.choice('0123456789') * n
         yield (digits,)
-
-def random_text_generator(seed):
-    rng = random.Random(seed)
-    alpha = "abcdefghijklmnopqrstuvwxyz"
-    alpha += alpha.upper()
-    punct = '.,!?'
-    for i in range(10000):
-        line = ""
-        while len(line) < 70:
-            word = "".join([rng.choice(alpha) for _ in range(rng.randint(1, 20))])
-            line += " " if len(line) > 0 else ""
-            line += word
-            if rng.randint(0, 99) < 20:
-                line += rng.choice(punct)
-        yield (line, )
 
 def group_equal_generator(seed):
     rng = random.Random(seed)
-    for i in range(1000):
-        items = []
-        ilen = rng.randint(1, 20)
-        for j in range(ilen):
-            burst = rng.randint(1, 10)
-            it = rng.randint(0, 1000)
-            for k in range(burst):
-                items.append(it)
-        yield (items,)
+    for i in range(50):
+        for j in range(10):
+            items = []
+            bursts = rng.randint(1, 2 + i // 5)
+            for k in range(bursts):
+                n = rng.randint(1, 2 + i // 5)
+                v = rng.randint(0, 10 + i // 20)
+                items.extend([v] * n)
+            yield (items,)
 
 def longest_palindrome_generator(seed):
+    lets = 'abcdefghijklmnopqrstuvxyz'
     rng = random.Random(seed)
     for i in range(1000):
-        m = rng.randint(5, 50)
-        text = ''
-        for j in range(m):
-            text += rng.choice(['a','b','c','d'])
-        yield (text, )
-        
-def values_to_keys_generator(seed):
-    rng = random.Random(seed)
-    for i in range(1000):
-        used_values = set()
-        used_keys = set()
-        dic = {}
-        size = rng.randint(5, 100)
-        while len(dic) < size:
-            key = rng.randint(-1000, 1000)
-            value = rng.randint(-1000, 1000)
-            if key in used_keys or value in used_values:
-                continue
-            used_keys.add(key)
-            used_values.add(value)
-            dic[key] = value
-        yield (dic,)
+        p1 = rng.randint(0, i + 3)
+        p2 = rng.randint(2, i + 3)
+        p3 = rng.randint(0, i + 3)
+        left = random_string(lets, p1, rng)
+        middle = random_string(lets, p2, rng)
+        if rng.randint(0, 1) == 1:
+            middle += middle[::-1]
+        else:
+            middle += middle[:len(middle)-1:-1]
+        right = random_string(lets, p3, rng)
+        yield (left + middle + right,)
     
 def reverse_ascending_sublists_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
-        curr = []
-        n = rng.randint(0, 20)
-        for j in range(n):
-            curr.append(rng.randint(0, 10000))
-        yield (curr, )
+        for j in range(5):
+            curr = []
+            for k in range(i + 1):
+                curr.append(rng.randint(0, 2 * i))
+            yield (curr, )
     
 def give_change_generator(seed):
     rng = random.Random(seed)
-    for i in range(100000):
-        coins = [1]
-        curr = 1
-        c = rng.randint(2, 5)
-        for j in range(c):
-            curr = curr + rng.randint(3, 30)
-            coins.append(curr)
-        coins.reverse()
-        yield (rng.randint(1, 500), coins)
+    coins = [1]
+    for i in range(10):
+        coins.append(coins[-1] + rng.randint(1, 1 + coins[-1]))
+    for i in range(1000):
+        for j in range(1, 10):
+            use = rng.sample(coins, j)
+            use.sort(reverse=True)
+            if use[-1] > 1:
+                use.append(1)
+            amount = 1
+            while amount < 5 * use[0]:
+                yield (amount, use)
+                amount += rng.randint(1, 2 + 2 * amount // 3)
     
 
 suits = ['clubs', 'diamonds', 'hearts', 'spades']
@@ -342,10 +385,10 @@ def hand_shape_distribution_generator(seed):
 def milton_work_point_count_generator(seed):
     rng = random.Random(seed)
     strains = suits + ['notrump']
-    for i in range(50000):
-        st = rng.choice(strains)
+    for i in range(10000):
         hand = rng.sample(deck, 13)
-        yield (hand, st)
+        for strain in strains:
+            yield (hand, strain)
 
 def sort_by_typing_handedness_generator():
     f = open('words_sorted.txt', 'r', encoding='utf-8')
@@ -358,14 +401,14 @@ def possible_words_generator(seed):
     words = [x.strip() for x in f]
     f.close()
     rng = random.Random(seed)
+    letters = 'abcdefghijklmnopqrstuvwxyz'
     for i in range(100):
+        k = rng.randint(1, 10)
+        guessed = set(rng.sample(letters, k))
         patword = rng.choice(words)
         pat = ''
         for ch in patword:
-            if rng.randint(0, 99) < 60:
-                pat += '*'
-            else:
-                pat += ch
+            pat += ch if ch in guessed else '*'
         yield (words, pat)
 
 def postfix_evaluate_generator(seed):
@@ -395,11 +438,6 @@ def reverse_reversed_generator(seed):
         items = __create_list(1 + (i % 8), rng)
         yield (items, )      
 
-def __create_random_word(n, rng):
-    result = ''
-    for i in range(n):
-        result += chr(ord('a') + rng.randint(0, 25))
-    return result
 
 def scrabble_value_generator(seed):
     rng = random.Random(seed)
@@ -435,7 +473,7 @@ def collapse_intervals_generator(seed):
     for i in range(1000):
         items = []
         curr = 1
-        n = rng.randint(1, 20)
+        n = rng.randint(1, i + 3)
         for j in range(n):
             m = rng.randint(1, 5)
             for k in range(m):
@@ -487,22 +525,36 @@ def contains_bingo_generator(seed):
 
 def can_balance_generator(seed):
     rng = random.Random(seed)
-    for i in range(10000):
-        n = rng.randint(1, 30)
-        items = [rng.randint(1,10) for i in range(n)]
-        yield (items, )
+    for i in range(500):
+        for j in range(10):
+            left, lm = [], 0
+            right = [rng.randint(1, i + 2)]
+            rm = right[0]
+            while lm != rm and lm + rm < 20 * (i+3):
+                v = rng.randint(1, i + 5)
+                s = rng.randint(0, 1)
+                if len(left) + len(right) > i + j + 3:
+                    if lm < rm:
+                        s, v = 0, (rm - lm) // (len(left) + 1)
+                    else:
+                        s, v = 1, (lm - rm) // (len(right) + 1)
+                v = max(v, 1)
+                if s == 0:
+                    left.append(v)
+                    lm += v * len(left)
+                else:
+                    right.append(v)
+                    rm += v * len(right)
+            yield (left[::-1] + [rng.randint(1, i+2)] + right,)
+            
 
 def calkin_wilf_generator():
     for v in [10, 42, 255, 987, 7654, 12356]:
         yield (v,)
 
 def fibonacci_sum_generator(seed):
-    rng = random.Random(seed)
-    curr = 1
-    while curr < 10 ** 1000:
-        yield (curr,)
-        curr = curr * 3
-        curr += rng.randint(1, 1000)
+    for v in it.islice(scale_random(seed, 2, 4), 1500):
+        yield (v,)
 
 def create_zigzag_generator(seed):
     rng = random.Random(seed)
@@ -513,12 +565,8 @@ def create_zigzag_generator(seed):
         yield (rows, cols, start)
 
 def fibonacci_word_generator(seed):
-    rng = random.Random(seed)
-    curr = 0
-    for i in range(10000):
-        yield (curr,)
-        curr += rng.randint(1, 10)
-        curr = curr * 2
+    for v in it.islice(scale_random(seed, 3, 6), 2000):
+        yield (v,)
 
 def all_cyclic_shifts_generator():
     f = open('words_sorted.txt', 'r', encoding='utf-8')
@@ -538,12 +586,9 @@ def josephus_generator():
             yield (n, k)
 
 def balanced_ternary_generator(seed):
-    rng = random.Random(seed)
-    curr = 1
-    for i in range(1, 1000):
-        yield (curr,)
-        yield (-curr,)
-        curr += rng.randint(1, max(3, curr // 10))
+    for v in it.islice(scale_random(seed, 3, 10), 2000):
+        yield (v,)
+        yield (-v,)
 
 __names = ["brad", "ben", "britain", "donald", "bill", "ronald",
              "george", "laura", "barbara",
@@ -562,13 +607,13 @@ def brangelina_generator():
 def frequency_sort_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
-        ln = rng.randint(1, 1000)
-        elems = [rng.randint(1, 2 + ln // 2) for x in range(ln)]
-        yield(elems,)
+        n = 2 * i
+        elems = [rng.randint(1, 2 + n // 2) for x in range(n)]
+        yield (elems,)
 
 def count_consecutive_summers_generator():
     for i in range(1, 1000):
-        yield(i,)
+        yield (i,)
 
 def detab_generator(seed):
     rng = random.Random(seed)
@@ -581,9 +626,9 @@ def running_median_of_three_generator(seed):
     rng = random.Random(seed)
     yield ([],)
     yield ([42],)
-    for i in range(100):
-        n = rng.randint(2, 1000)
-        items = [rng.randint(1, 100) for x in range(n)]
+    for i in range(500):
+        n = i + 2
+        items = [rng.randint(1, n) for x in range(n)]
         yield (items,)
         
 def iterated_remove_pairs_generator(seed):
@@ -597,31 +642,24 @@ def iterated_remove_pairs_generator(seed):
 def is_perfect_power_generator(seed):
     rng = random.Random(seed)
     for k in range(500):
-        base = rng.randint(2, 10)
-        exp = rng.randint(2, 13 - base)
-        off = rng.randint(0, 1)
+        base = rng.randint(2, 3 + k // 20)
+        exp = rng.randint(2, 3 + k // 20)
+        off = rng.randint(-1, 1)
         yield (base ** exp - off, )
 
 def sort_by_digit_count_generator(seed):
     rng = random.Random(seed)
     for k in range(1000):
-        n = rng.randint(1, 1000)
-        yield ([rng.randint(1, 10**6) for i in range(n)],)
+        n = k + 2
+        yield ([rng.randint(1, n * n * n * n) for i in range(n)],)
 
 def count_divisibles_in_range_generator(seed):
-    rng = random.Random(seed)
-    v = 3
-    step = 1
-    up = 10
-    for i in range(100000):
-        start = rng.randint(-v, v)
-        end = rng.randint(0, v) + start
-        n = rng.randint(1, v)
-        yield (start, end, n)
-        v += step
-        if i == up:
-            up = 10 * up
-            step = step * 10
+    prev = 0
+    vals = it.islice(scale_random(seed, 2, 6), 1000)
+    divs = it.islice(scale_random(seed, 2, 20), 1000)
+    for (v, k) in zip(vals, divs):
+        yield (prev, v, k)
+        prev = v
 
 __players = ['anita', 'suzanne', 'suzy', 'tom', 'steve', 'ilkka', 'rajesh',
              'amy', 'penny', 'sheldon', 'leonard', 'bernadette', 'howard']
@@ -645,37 +683,17 @@ def losing_trick_count_generator(seed):
         yield (rng.sample(deck, 13),)
 
 def prime_factors_generator(seed):
-    rng = random.Random(seed)
-    curr, step, goal = 2, 1, 10
-    for i in range(10000):
-        yield (curr,)
-        curr += step * rng.randint(1, 3)
-        curr += rng.randint(1, 10)
-        if i == goal:
-            step += 5
-            goal *= 10
-
-def prime_factors_generator2(seed):
-    rng = random.Random(seed)
-    curr = 10
-    for i in range(30):
-        for j in range(20):
-            yield (curr,)
-            curr += rng.randint(1, 10)
-        curr += rng.randint(curr // 5, curr // 2)
+    for v in it.islice(scale_random(seed, 2, 30), 500):
+        yield (v,)
 
 def factoring_factorial_generator(seed):
-    rng = random.Random(seed)
-    curr = 1
-    for k in range(2, 1000):
-        yield (curr,)
-        curr += rng.randint(1, 20)
+    for v in it.islice(scale_random(seed, 2, 10), 100):
+        yield (v,)
 
 def riffle_generator(seed):
-    rng = random.Random(seed)
     for i in range(1000):
-        n = rng.randint(0, 100)
-        items = [rng.randint(0, 10**6) for j in range(2 * n)]
+        n = 2 + i // 10
+        items = list(range(2 * n))
         yield (items[:], True)
         yield (items, False)
 
@@ -686,7 +704,7 @@ def words_with_given_shape_generator(seed):
     f.close()
     for i in range(100):
         n = rng.randint(5, 10)
-        pattern = [rng.randint(-1,1) for j in range(n)]
+        pattern = [rng.randint(-1, 1) for j in range(n)]
         yield (words, pattern)
         
 def squares_intersect_generator(seed):
@@ -698,17 +716,26 @@ def squares_intersect_generator(seed):
         x2 = rng.randint(1, 10)
         y2 = rng.randint(1, 10)
         d2 = rng.randint(1, 10)
-        s = 10 ** rng.randint(1, 10)
+        s = 10 ** rng.randint(1, 2 + i // 10000)
         yield ((s*x1, s*y1, s*d1), (s*x2, s*y2, s*d2))
         
 def only_odd_digits_generator(seed):
     rng = random.Random(seed)
-    curr = 1
-    for i in range(1, 1001):
-        yield (curr,)
-        curr += rng.randint(1, 10)
-        if i % 100 == 0:
-            curr *= 2            
+    for i in range(3000):
+        n = rng.randint(0, 9)
+        p = 1
+        stop = False
+        for j in range(1 + i // 10):
+            yield (n,)
+            yield (n+p, )
+            p = p * 10
+            if stop:
+                break
+            if rng.randint(0, 99) < 95:
+                n = 10 * n + rng.choice([1, 3, 5, 7, 9])
+            else:
+                n = 10 * n + rng.choice([0, 2, 4, 6, 8])
+                stop = True
 
 def pancake_scramble_generator(seed):
     rng = random.Random(seed)
@@ -722,11 +749,11 @@ def pancake_scramble_generator(seed):
 def lattice_paths_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
-        x = rng.randint(2, 50)
-        y = rng.randint(2, 50)
+        x = rng.randint(2, 3 + i // 40)
+        y = rng.randint(2, 3 + i // 40)
         tabu = []
-        len_ = rng.randint(1, max(1, x*y // 10))
-        while len(tabu) < len_:
+        n = rng.randint(1, max(1, x*y // 10))
+        while len(tabu) < n:
             xx = rng.randint(0, x)
             yy = rng.randint(0, y)
             if (xx, yy) not in tabu:
@@ -736,20 +763,20 @@ def lattice_paths_generator(seed):
 def count_carries_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
-        b1 = rng.randint(2, 10)
-        e1 = rng.randint(2, 1000)
-        b2 = rng.randint(2, 10)
-        e2 = rng.randint(2, 1000)
+        b1 = rng.randint(2, 3 + i // 500)
+        e1 = rng.randint(2, i + 3)
+        b2 = rng.randint(2, 3 + i // 500)
+        e2 = rng.randint(2, i + 3)
         yield (b1**e1, b2**e2)
 
 def count_squares_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
         pts = set()
-        w = rng.randint(3, 20)
-        h = rng.randint(3, 20)
-        len_ = rng.randint(1, (w * h) // 3)
-        while len(pts) < len_:
+        w = rng.randint(3, 4 + i // 50)
+        h = rng.randint(3, 4 + i // 50)
+        n = rng.randint(1, (w * h) // 3)
+        while len(pts) < n:
             x = rng.randint(0, w)
             y = rng.randint(0, h)
             pts.add((x, y))
@@ -786,10 +813,9 @@ def three_summers_generator(seed):
     rng = random.Random(seed)
     for i in range(100):
         n = rng.randint(3, 20)
-        items = [0 for i in range(n)]
-        items[0] = rng.randint(1, 10)
+        items = [rng.randint(1, 10)]
         for i in range(1, n):
-            items[i] = items[i-1] + rng.randint(1, 20)        
+            items.append(items[-1] + rng.randint(1, 20))      
         for goal in range(1, sum(items)):
             yield (items[:], goal)
 
@@ -803,9 +829,9 @@ def first_missing_positive_generator(seed):
 
 def ztalloc_generator(seed):
     rng = random.Random(seed)
-    for i in range(10000):
+    for i in range(50000):
         if rng.randint(0, 99) < 50:
-            c = rng.randint(1, 100000)
+            c = rng.randint(1, 2 + 10 * i)
             pat = []
             while c > 1:
                 if c % 2 == 0:
@@ -821,24 +847,12 @@ def ztalloc_generator(seed):
         yield (''.join(pat), )
 
 def sum_of_two_squares_generator(seed):
-    rng = random.Random(seed)
-    n, step, goal = 1, 10, 10
-    for i in range(10000):
-        yield (n,)
-        n += rng.randint(1, step)
-        if i == goal:
-            step = step * 2
-            goal = goal * 10    
-
+    for v in it.islice(scale_random(seed, 2, 5), 150):
+        yield (v,)
+            
 def sum_of_distinct_cubes_generator(seed):
-    rng = random.Random(seed)
-    n, step, goal = 1, 10, 10
-    for i in range(1000):        
-        yield (n,)
-        n += rng.randint(1, step)
-        if i == goal:
-            step = step * 4
-            goal = goal * 10
+    for v in it.islice(scale_random(seed, 2, 5), 200):
+        yield (v,)
 
 def count_distinct_sums_and_products_generator(seed):
     rng = random.Random(seed)
@@ -846,7 +860,6 @@ def count_distinct_sums_and_products_generator(seed):
         items = [rng.randint(1, 10)]
         for i in range(n):
             items.append(items[-1] + rng.randint(1, 10))
-        items.sort()
         yield (items, )
 
 def seven_zero_generator():
@@ -855,11 +868,11 @@ def seven_zero_generator():
 
 def remove_after_kth_generator(seed):
     rng = random.Random(seed)
-    for i in range(100):
+    for i in range(200):
         items = []
-        nn = rng.randint(0, 100)
+        nn = rng.randint(0, i + 3)
         for k in range(nn):
-            n = rng.randint(1, 10)
+            n = rng.randint(1, 2 + i // 10)
             m = rng.randint(1, 30)
             items.extend([n] * m)
         rng.shuffle(items)
@@ -895,11 +908,12 @@ def autocorrect_word_generator(seed):
             word = word[:p] + rng.choice(neighbours) + word[p+1:]
             yield (word, words, df)            
             
-def pyramid_blocks_generator():    
-    for n in range(1, 10):
-        for m in range(1, 10):
-            for h in range(1, 50):
-                yield (n, m, h)
+def pyramid_blocks_generator(seed):    
+    n = 300
+    ns = it.islice(scale_random(seed, 3, 10), n)
+    ms = it.islice(scale_random(seed + 1, 3, 10), n)
+    hs = it.islice(scale_random(seed + 2, 2, 15), n)
+    yield from zip(ns, ms, hs)
         
 def is_cyclops_generator(seed):
     rng = random.Random(seed)
@@ -962,18 +976,22 @@ def line_with_most_points_generator(seed):
             for i in range(rng.randint(1, 10)):
                 pts.add((sx, sy))
                 step = rng.randint(1, 10)
-                sx, sy = sx + step * dx, sy + step * dy                
-        yield (list(pts),)
+                sx, sy = sx + step * dx, sy + step * dy
+        pts = list(pts)
+        pts.sort()
+        yield (pts,)
 
 def count_maximal_layers_generator(seed):
     rng = random.Random(seed)
     for i in range(300):
         n = 3 + i
-        points = []
-        for j in range(n):
-            x = rng.randint(1, 10)
-            y = rng.randint(1, 10)
-            points.append((x, y))
+        points = set()
+        while len(points) < n:
+            x = rng.randint(1, 3 + n)
+            y = rng.randint(1, 3 + n)
+            points.add((x, y))
+        points = list(points)
+        points.sort()
         yield (points,)
 
 def taxi_zum_zum_generator(seed):
@@ -1264,7 +1282,9 @@ def count_overlapping_disks_generator(seed):
                 y = rng.randint(-d, d)
                 r = rng.randint(1, n)
                 disks.add((x, y, r))
-            yield (list(disks),)
+            disks = list(disks)
+            disks.sort()
+            yield (disks,)
 
 def sublist_with_mostest_generator(seed):
     rng = random.Random(seed)
@@ -1545,8 +1565,6 @@ def hitting_integer_powers_generator():
             yield (a, b, 10**(2 + (a+b) % 3))
 
 
-
-
 # List of test cases for the 109 functions defined.        
           
 testcases = [    
@@ -1596,7 +1614,7 @@ testcases = [
         (
         "sum_of_distinct_cubes",
         sum_of_distinct_cubes_generator(seed),
-        "0b07e56fbe7550978f0954359c255904b71eea7cab986b8419"
+        "d1ed5e8a0688116c7536b01804d09378a13559a0d6a9427ddf"
         ),  
         (
         "tukeys_ninthers",
@@ -1720,7 +1738,7 @@ testcases = [
         (
         "count_maximal_layers",
         count_maximal_layers_generator(seed),
-        "4d402c9548e39fad266ec50a872f73bef8834cfdd28559e945"
+        "0e97cb2be56e1adef73a72de8fe0ccf2f4ac391201eb921986"
         ),
         (
         "square_follows",
@@ -1739,8 +1757,8 @@ testcases = [
         ),        
         (
         "pyramid_blocks",
-        pyramid_blocks_generator(),
-        "dbb88cff11ecd1979913d1403eba0cd2af9ceb33f8cc97350b"
+        pyramid_blocks_generator(seed),
+        "e7609cac3f32844e182d296ca757104a9684f335df20558381"
         ),
         (
         "autocorrect_word",
@@ -1750,7 +1768,7 @@ testcases = [
         (
         "remove_after_kth",
         remove_after_kth_generator(seed),
-        "e5619288fdeacc17be8cab29da26b3b22f0dd46fe4da634ad1"
+        "4988a0cea5800a5ffaf72f726388afd99192d04b4578289595"
         ),        
         (
         "seven_zero",
@@ -1765,7 +1783,7 @@ testcases = [
         (
         "sum_of_two_squares",
         sum_of_two_squares_generator(seed),
-        "d100be2b55c118577e280ce2577bb0ee891fda973a6a67ff36"
+        "93086670c2c63510741e58329a83fe42cc469762ca26c74130"
         ),
         # Removed from problem set April 20, 2020
         # (
@@ -1781,12 +1799,12 @@ testcases = [
         (
         "riffle",
         riffle_generator(seed),                
-        "f50d15764e9890412d07c70c248512bd41577a02246eb99e4e"
+        "53f8b9eda610525fc17d1ba2dc60150c8f8c98f31cf3420550"
         ),              
         (
         "ztalloc",
         ztalloc_generator(seed),
-        "69c370aca835c890f63c44a3ddfff556ddfebae5592a81a550"
+        "b6336106ac97b9ec4306c77c7e28775b0e1194e75dd10ee219"
         ),        
         (
         "losing_trick_count",
@@ -1824,17 +1842,17 @@ testcases = [
         (
         "count_squares",
         count_squares_generator(seed),
-        "f8dcaa242048fec3df7b29d553ef74c7d5081c9c0409d47325"
+        "69c94bb56d9eff5bc9cdfc4890718606c0a8bdf242c3440d98"
         ),        
         (
         "count_carries",
         count_carries_generator(seed),
-        "a552e7aa0d047579e1fab88fa5bf72a837a56f39aa89352c53"
+        "e48e0785704b40e82bc086e6edd86d55aa18fe9d017a6547e7"
         ),
         (
         "lattice_paths",
         lattice_paths_generator(seed),
-        "533b0f627f2bb1cd17275f1eb487e4f03ce13175f5a654f220"
+        "dbca1d47adc5713b65fcb90dd9ddf1d747f521eccf341289a4"
         ),        
         (
         "pancake_scramble",
@@ -1844,12 +1862,12 @@ testcases = [
         (
         "only_odd_digits",                
         only_odd_digits_generator(seed),
-        "af6f4445b6413e06ef5538a59524bed0a8f2743b69e8f40e63"
+        "24d656750cff73ad12fa9ff8320bbae662c2fbb5a6f4ece514"
         ),
         (
         "squares_intersect",
         squares_intersect_generator(seed),
-        "54034da8f980d5b5f68e58dbf36bc7a05c6c7f14b3a9c5ee4a"
+        "0ad0e8b2971f3cafc93c37e2bd618e94d66312da64f4bd6755"
         ),        
         (
         "rooks_with_friends",
@@ -1892,7 +1910,7 @@ testcases = [
         (
         "first_preceded_by_smaller",
         first_preceded_by_smaller_generator(seed),
-        "4219a3e4a902e3734aaec3765fa6f0123e8746b8508d8a5aec"
+        "40ebe484996f84edb425c1a3ae5d70aa62ad308a09e926622b"
         ),        
         (
         "words_with_given_shape",                
@@ -1902,17 +1920,17 @@ testcases = [
         (
         "prime_factors",
         prime_factors_generator(seed),
-        "f02ad34ed7ee7ca882893e0a873ef6d445ffa8fcce1549f7e9"
+        "fbb31e68d216d7430c47a3e3ac9eb0d4240ef2ae698eb2ded4"
         ),  
         (
         "fibonacci_sum",
         fibonacci_sum_generator(seed),
-        "3edd804164f25895c11de5dce9463c0144e70389a0dcab85d6"
+        "bb13f872b52611a389234d48ad1a19ddea88bedb01ddb08a43"
         ),  
         (
         "factoring_factorial",
         factoring_factorial_generator(seed),
-        "5c39dc014ff6afe099e058e996d57112d16d8c86b56f07ba06"
+        "be5d5249b396c259bde5338de73ae4d29831314d6c0fb9e369"
         ),        
         (
         "bridge_hand_shorthand",
@@ -1922,7 +1940,7 @@ testcases = [
         (
         "milton_work_point_count",
         milton_work_point_count_generator(seed),
-        "c85dd000963f934f119ece00f50c70dace195652906db5a71b"
+        "5694509170df1fef10bbb60641b7906e220d951b73d3072f7e"
         ),
         # Removed from problem set April 20, 2020        
         # (
@@ -1933,17 +1951,17 @@ testcases = [
         (
         "count_divisibles_in_range",        
         count_divisibles_in_range_generator(seed),
-        "046f15a3e3a38735d04736da74262a54f7c6882c61b3e4db5a"
+        "4c3246091a84e8b3310c8c9bff017d2fab854e2248a05fab30"
         ),
         (
         "sort_by_digit_count",
         sort_by_digit_count_generator(seed),
-        "faa4547a1a4fc27a0e8c16c1f1d4f8d6385587ab08e9c9d0c5"
+        "15112b8c5374e1ebcf8d67bf391f3528c29a3ac3ece70ac5c1"
         ),
         (
         "is_perfect_power",                
         is_perfect_power_generator(seed),
-        "5c396434e95e5899055195e80660137588f6d81c3cf6594d32"
+        "31baeffbf7aac8f1506fb1c4f70236abc5adc902e1a564724a"
         ),
         # Removed from problem set April 20, 2020          
         # (
@@ -1959,12 +1977,12 @@ testcases = [
         (
         "running_median_of_three",
         running_median_of_three_generator(seed),
-        "4325b7bb7172d5a4f7e478174661d109aea0de9bba3480536d"
+        "62d8c78ec1a5a7bdc9e30655380f59f59a64daacc8a272a29b"
         ),
         (
         "frequency_sort",
         frequency_sort_generator(seed),
-        "608f5351a1e77413aff8779d4586ca536eb5314e686892b391"
+        "540f8b17005ed2cb3a40c49304eeb324e9aa0db81adf830bd0"
         ),
         (
         "count_consecutive_summers",         
@@ -1979,7 +1997,7 @@ testcases = [
         (
         "balanced_ternary",
         balanced_ternary_generator(seed),
-        "08dcda71f136c16362cc53e62f98d49b28bb45c43ddee4ea32"        
+        "842084fa88061721ede89bef0e1fef414b55fceb580e3d1735"       
         ),
         (
         "josephus",
@@ -2000,7 +2018,7 @@ testcases = [
         (
         "fibonacci_word",
         fibonacci_word_generator(seed),
-        "275ac5dc13b0bf5364bb25fca249b2115357fc7666154d1cd6"
+        "b6385c1cb1a88f2392f507cae3bc302c468d5747af8802e410"
         ),        
         (
         "create_zigzag",
@@ -2015,7 +2033,7 @@ testcases = [
         (
         "can_balance",
         can_balance_generator(seed),
-        "0d79528d49fc77f06d98f3d2672306097a1aacfcb65e050f6a"
+        "6d06001694009cde7c976c645acc39da4e24142e7aca3c24af"
         ),
         # Removed from problem set April 20, 2020
         # (
@@ -2036,7 +2054,7 @@ testcases = [
         (
         "collapse_intervals",
         collapse_intervals_generator(seed),
-        "bb95484119b5e00b704121baa1f7ef5312154ad542cf9da828"
+        "36e0b7bcddde70272108b2f7daeb504d71edee1146b7a1a5d0"
         ),        
         (
         "expand_intervals",
@@ -2046,7 +2064,7 @@ testcases = [
         (
         "reverse_ascending_sublists",
         reverse_ascending_sublists_generator(seed),
-        "78fed45a9925dd87964e1433e1db5451900de41a491f2b8144"
+        "b4cbb1ed5006364e68d8875e733abeec1241165d7b84402f62"
         ),       
         (
         "reverse_reversed",       
@@ -2056,7 +2074,7 @@ testcases = [
         (
         "longest_palindrome",
         longest_palindrome_generator(seed),
-        "3dd73f155d4e4debbcaba8a2815479ecf42f528ec577173a63"
+        "ac239750104ee8ff92f547c3e73ffd4ca943ac0363f3b79f5a"
         ),
         # Removed from problem set April 20, 2020
         # (
@@ -2071,8 +2089,8 @@ testcases = [
         ),
         (
         "is_ascending",        
-        is_ascending_generator(7),
-        "4c5f0dbf663f3350b7cf3d16f0589fc7dc5168ca17e4aefd3f"
+        is_ascending_generator(seed),
+        "e2b51f874af9be6d42ffed59478bc01f113e9d1744f930e346"
         ),
         (
         "double_until_all_digits",
@@ -2082,7 +2100,7 @@ testcases = [
         (
         "give_change",
         give_change_generator(seed),
-        "e8419a56ab09d1cf1effb2bb9c45802ae21a2304793cc8a892"
+        "5c38f097ab4b39598124d3983a58a10301e012ee156ac05f1a"
         ),
         (
         "winning_card",
@@ -2114,7 +2132,7 @@ testcases = [
         (
         "possible_words",
         possible_words_generator(seed),  
-        "7bea02b2de5dd415210774e7337464e030e90b301ae634c153"
+        "f5fcb8d31014ed4dd3b618a08423b1370d80e171bd2d96f7d8"
         ),
         
         # New additions to the problem set in 2020.
@@ -2217,10 +2235,10 @@ testcases = [
 ]
 
 try:
-    print("109 Python Problems tester, April 26, 2020, Ilkka Kokkarinen.")
+    print("109 Python Problems tester, April 27, 2020, Ilkka Kokkarinen.")
     exec(f"import {studentfile} as labs109")
 except Exception:
-    print("ERROR: Unable to find file {studentfile}.py. Exiting...")
+    print(f"ERROR: Unable to find file {studentfile}.py. Exiting...")
     exit(1)
 
 
