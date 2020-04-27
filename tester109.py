@@ -107,11 +107,16 @@ def test_one_function(f, testcases, expected = None, recorder = None, known = No
             print(sr.strip()[:300], file = recorder)            
             if count >= testcase_cutoff:
                 break
-        if use_record and known and count < testcase_cutoff:
-            if recorded and not sr.strip().startswith(recorded[count]):
+        if use_record and known and count < testcase_cutoff and recorded:
+            should_be = recorded[count]
+            if len(should_be) < 295:
+                ok = (sr.strip() == should_be)
+            else:
+                ok = sr.strip().startswith(should_be)
+            if not ok:
                 crashed = True
                 print(f"DISCREPANCY AT TEST CASE #{count}.")
-                print(f"TEST CASE: {repr(test)})")
+                print(f"TEST CASE: {repr(test)[:300]})")
                 print(f"EXPECTED: <{recorded[count]}>")
                 print(f"RETURNED: <{sr}>")
                 break
