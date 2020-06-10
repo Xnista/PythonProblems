@@ -1,9 +1,8 @@
 # Automated tester for the problems in the collection
 # "109 Python Problems for CCPS 109" by Ilkka Kokkarinen.
-
-# VERSION May 26, 2020
-
 # Ilkka Kokkarinen, ilkka.kokkarinen@gmail.com
+
+version = "June 10, 2020"
 
 from hashlib import sha256
 from time import time
@@ -377,7 +376,7 @@ def give_change_generator(seed):
     
 
 suits = ['clubs', 'diamonds', 'hearts', 'spades']
-ranks = {'deuce' : 2, 'trey' : 3 , 'four' : 4, 'five' : 5,
+ranks = {'two' : 2, 'three' : 3 , 'four' : 4, 'five' : 5,
          'six' : 6, 'seven' : 7, 'eight' : 8, 'nine' : 9,
          'ten' : 10, 'jack' : 11, 'queen' : 12, 'king' : 13,
          'ace' : 14 }
@@ -2128,7 +2127,7 @@ testcases = [
         (
         "winning_card",
         winning_card_generator(seed),
-        "32c7fee1415a8095db6f318ad293dd08dec4e6904f304c4a73"
+        "521ef5920c74596498f231116663de8089b8fdbc1745e1219e"
         ),
         # Removed from problem set April 20, 2020
         # (
@@ -2258,7 +2257,7 @@ testcases = [
 ]
 
 try:
-    print("109 Python Problems tester, April 27, 2020, Ilkka Kokkarinen.")
+    print(f"109 Python Problems tester, {version}, Ilkka Kokkarinen.")
     exec(f"import {studentfile} as labs109")
 except Exception:
     print(f"ERROR: Unable to find file {studentfile}.py. Exiting...")
@@ -2267,7 +2266,8 @@ except Exception:
 
 import os.path
 
-#discrepancy(labs109.brangelina, brangelina, brangelina_generator())
+#discrepancy(labs109.safe_squares_rooks, safe_squares_rooks,
+#            safe_squares_generator(seed))
 
 if os.path.exists(recordfile):
     known, curr = dict(), ''
