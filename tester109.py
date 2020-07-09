@@ -2,7 +2,7 @@
 # "109 Python Problems for CCPS 109" by Ilkka Kokkarinen.
 # Ilkka Kokkarinen, ilkka.kokkarinen@gmail.com
 
-version = "June 10, 2020"
+version = "July 9, 2020"
 
 from hashlib import sha256
 from time import time
@@ -21,7 +21,9 @@ recordfile = 'record'
 
 # Whether to use the recorded test results when they exist. This
 # needs to be set to false only when editing the test case
-# generator for some problem.
+# generator for a new or an existing problem. Once you have
+# added the new problem, set this to True and delete the record
+# file, and then run this tester to generate the record file.
 use_record = True
 
 # Name of the module that contains the student solutions.
@@ -56,14 +58,14 @@ def emit_args(args, cutoff = 100):
              print(repr(a) if len(repr(a)) < 100 else '[...]', end = '')
     print()
 
-# Given two implementations of the same function specification, run
-# the test cases for both of them and output the shortest test case
-# for which the two implementations disagree.
+# Given teacher and student implementations of the same function, run
+# the test cases for both of them and output the first or the shortest
+# test case for which these two implementations disagree.
 
 def discrepancy(teacher, student, testcases, stop_at_first = False):
-    shortest, d1, d2, n, disc = None, None, None, 0, 0
-    for elem in testcases:
-        n += 1
+    shortest, d1, d2, disc = None, None, None, 0
+    for n, elem in enumerate(testcases):
+        elem2 = elem[:] # In case student function messes up elem...
         try:
             r1 = canonize(teacher(*elem))
         except Exception as e:
@@ -74,8 +76,8 @@ def discrepancy(teacher, student, testcases, stop_at_first = False):
             r2 = f"CRASH! {e}"
         if r1 != r2:
             disc += 1
-            if stop_at_first or shortest == None or len(str(elem)) < len(shortest):
-                shortest, d1, d2 = elem, r1, r2
+            if stop_at_first or shortest == None or len(str(elem2)) < len(shortest):
+                shortest, d1, d2 = elem2, r1, r2
             if stop_at_first:
                 break
     if shortest == None:
@@ -1587,6 +1589,16 @@ def hitting_integer_powers_generator():
         for a in range(2, b):
             yield (a, b, 10**(2 + (a+b) % 3))
 
+def permutation_cycles_generator(seed):
+    rng = random.Random(seed)
+    yield ([0], )
+    for i in range(200):
+        n = 2 + i // 10
+        for j in range(3 * i):
+            perm = list(range(n))
+            rng.shuffle(perm)
+            yield (perm,)
+
 # List of test cases for the 109 functions defined.        
           
 testcases = [    
@@ -2224,11 +2236,12 @@ testcases = [
         nearest_polygonal_number_generator(seed),
         "6813a79fcc5c8249e92e0bf4c1301fde4187df58d2207b23ca"        
         ),
-        (
-        "floor_power_solve",
-        floor_power_solve_generator(seed),
-        "177465906587f4bb545d546d9b9e4324a4fcbc46c2d3ec4a97"       
-        ),
+        # Removed from problem set July 8, 2020
+        #(
+        #"floor_power_solve",
+        #floor_power_solve_generator(seed),
+        #"177465906587f4bb545d546d9b9e4324a4fcbc46c2d3ec4a97"       
+        #),
         (
         "subtract_square",
         subtract_square_generator(seed),
@@ -2253,21 +2266,26 @@ testcases = [
         "hitting_integer_powers",
         hitting_integer_powers_generator(),
         "ee7c93a64dd4090a231abc889da7ab6f300aa4460fdd7ff79a"
+        ),
+        (
+        "permutation_cycles",
+        permutation_cycles_generator(seed),
+        "45ecf7be3ff5dbfa46a97ce660ee0484fc99baac36f55c8ad5"
         )
 ]
 
+print(f"109 Python Problems tester, {version}, Ilkka Kokkarinen.")
 try:
-    print(f"109 Python Problems tester, {version}, Ilkka Kokkarinen.")
     exec(f"import {studentfile} as labs109")
-except Exception:
+except Exception as e:
     print(f"ERROR: Unable to find file {studentfile}.py. Exiting...")
+    print(f"{e}")
     exit(1)
-
 
 import os.path
 
-#discrepancy(labs109.safe_squares_rooks, safe_squares_rooks,
-#            safe_squares_generator(seed))
+#discrepancy(labs109.ryerson_letter_grade, ryerson_letter_grade,
+#            ryerson_letter_grade_generator(), True)
 
 if os.path.exists(recordfile):
     known, curr = dict(), ''
