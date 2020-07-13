@@ -25,7 +25,7 @@ recordfile = 'record'
 # generator for a new or an existing problem. Once you have
 # added the new problem, set this to True and delete the record
 # file, and then run this tester to generate the record file.
-use_record = False
+use_record = True
 
 # Name of the module that contains the student solutions.
 studentfile = 'labs109'
