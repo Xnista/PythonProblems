@@ -2,13 +2,14 @@
 # "109 Python Problems for CCPS 109" by Ilkka Kokkarinen.
 # Ilkka Kokkarinen, ilkka.kokkarinen@gmail.com
 
-version = "July 9, 2020"
-
 from hashlib import sha256
 from time import time
 import itertools as it
 import random
 import gzip
+import os.path
+
+version = "July 13, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
@@ -24,7 +25,7 @@ recordfile = 'record'
 # generator for a new or an existing problem. Once you have
 # added the new problem, set this to True and delete the record
 # file, and then run this tester to generate the record file.
-use_record = True
+use_record = False
 
 # Name of the module that contains the student solutions.
 studentfile = 'labs109'
@@ -33,7 +34,7 @@ studentfile = 'labs109'
 # guarantee that such results are identical in all environments.
 
 def canonize(result):
-    if isinstance(result, dict):        
+    if isinstance(result, dict):
         result = [(key, result[key]) for key in result]
         result.sort()
     elif isinstance(result, set):
@@ -42,20 +43,20 @@ def canonize(result):
     return result
 
 # When reporting an error, make sure not to flood the user console.
-    
-def emit_args(args, cutoff = 100):
+
+def emit_args(args, cutoff=100):
     for (i, a) in enumerate(args):
         if i > 0:
-            print(", ", end = '')
+            print(", ", end='')
         if type(a) == list or type(a) == tuple:
             if len(a) < cutoff:
-                print(a, end = '')
+                print(a, end='')
             else:
                 left = ", ".join([str(x) for x in a[:5]])
-                right = ", ".join([str(x) for x in a[-5:]])     
-                print(f"[{left}, [{len(a)-10} omitted...], {right}]", end = '')
+                right = ", ".join([str(x) for x in a[-5:]])
+                print(f"[{left}, [{len(a)-10} omitted...], {right}]", end='')
         else:
-             print(repr(a) if len(repr(a)) < 100 else '[...]', end = '')
+             print(repr(a) if len(repr(a)) < 100 else '[...]', end='')
     print()
 
 # Given teacher and student implementations of the same function, run
@@ -65,7 +66,7 @@ def emit_args(args, cutoff = 100):
 def discrepancy(teacher, student, testcases, stop_at_first = False):
     shortest, d1, d2, disc = None, None, None, 0
     for n, elem in enumerate(testcases):
-        elem2 = elem[:] # In case student function messes up elem...
+        elem2 = elem[:]  # In case student function messes up elem...
         try:
             r1 = canonize(teacher(*elem))
         except Exception as e:
@@ -108,21 +109,21 @@ def test_one_function(f, testcases, expected = None, recorder = None, known = No
         print(f"****{fname}", file = recorder)
     if known:
         recorded = known.get(fname, None)
-    chk, starttime, crashed = sha256(), time(), False    
+    chk, starttime, crashed = sha256(), time(), False
     for (count, test) in enumerate(testcases):
         try:
             result = f(*test)
         except Exception as e: # catch any exception
             crashed = True
             print(f"CRASH! {e}")
-            break        
+            break
         # If the result is a set or dictionary, turn it into sorted list first.
         result = canonize(result)
         # Update the checksum.
         sr = str(result)
         chk.update(sr.encode('utf-8'))
         if recorder:
-            print(sr.strip()[:300], file = recorder)            
+            print(sr.strip()[:300], file = recorder)
             if count >= testcase_cutoff:
                 break
         if use_record and known and count < testcase_cutoff and recorded:
@@ -156,22 +157,22 @@ def test_one_function(f, testcases, expected = None, recorder = None, known = No
     else:
         return 0
 
-# Sort the suite of test cases according to the order in which 
+# Sort the suite of test cases according to the order in which
 # they appear in the student source code.
 
 def sort_by_source(suite):
     funcs = dict()
-    with open(f'{studentfile}.py', 'r', encoding='utf-8') as source:        
+    with open(f'{studentfile}.py', 'r', encoding='utf-8') as source:
         for (lineno, line) in enumerate(source):
             if line.startswith("def "):
                 fname = line[4:line.find('(')].strip()
                 if fname in funcs:
                     print(f"Warning: multiple definition for {fname}")
                 funcs[fname] = lineno
-        suite.sort(key = lambda x: funcs.get(x[0], 9999999))
+        suite.sort(key=lambda x: funcs.get(x[0], 9999999))
     return suite
-    
-    
+
+
 # Runs the tests for all functions in the suite, returning the
 # count of how many of those were implemented and passed the test.
 
@@ -182,7 +183,7 @@ def test_all_functions(module, suite, recorder = None, known = None):
         print(f"MESSAGE! MAKE SURE THAT THE FILE {recordfile} FROM THE")
         print("PLACE WHERE YOU DOWNLOADED THIS AUTOMATED TESTER IS")
         print("PROPERLY DOWNLOADED INTO THIS WORKING DIRECTORY!")
-    count, total = 0, 0    
+    count, total = 0, 0
     for (fname, testcases, expected) in sort_by_source(suite):
         try:
             f = module.__dict__[fname]
@@ -199,7 +200,7 @@ def test_all_functions(module, suite, recorder = None, known = None):
     return count
 
 # Some utility functions to help writing test generators.
-    
+
 # Produce an infinite sequence of exponentially increasing integers.
 # The parameters scale and skip determine how quickly the sequence grows.
 def scale_random(seed, scale, skip):
@@ -216,8 +217,9 @@ def scale_random(seed, scale, skip):
 
 # This function replaced warandpeace.txt as the source of textual data.
 # Since none of the problems that used that file were linguistic in nature,
-# there was no point using real text to test them, saving a couple of megs
-# of deadweight from this project.
+# there was no point using real text to test them, losing a few megs of
+# deadweight from this project folder.
+
 def random_text_generator(seed, n = 70):
     rng = random.Random(seed)
     alpha = "abcdefghijklmnopqrstuvwxyz"
@@ -232,8 +234,8 @@ def random_text_generator(seed, n = 70):
             if rng.randint(0, 99) < 20:
                 line += rng.choice(punct)
         yield (line, )
-        
-# Create a random n-character string from the given alphabet. 
+
+# Create a random n-character string from the given alphabet.
 def random_string(alphabet, n, rng):
     result = ''
     for i in range(n):
@@ -245,7 +247,7 @@ def random_string(alphabet, n, rng):
 def ryerson_letter_grade_generator():
     for i in range(0, 150):
         yield (i,)
-        
+
 def is_ascending_generator(seed):
     rng = random.Random(seed)
     for i in range(500):
@@ -272,7 +274,7 @@ def safe_squares_generator(seed):
             if (px, py) not in pieces:
                 pieces.append((px, py))
         yield (n, pieces)
-        
+
 def rooks_with_friends_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
@@ -350,7 +352,7 @@ def longest_palindrome_generator(seed):
             middle += middle[:len(middle)-1:-1]
         right = random_string(lets, p3, rng)
         yield (left + middle + right,)
-    
+
 def reverse_ascending_sublists_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
@@ -359,7 +361,7 @@ def reverse_ascending_sublists_generator(seed):
             for k in range(i + 1):
                 curr.append(rng.randint(0, 2 * i))
             yield (curr, )
-    
+
 def give_change_generator(seed):
     rng = random.Random(seed)
     coins = [1]
@@ -375,7 +377,7 @@ def give_change_generator(seed):
             while amount < 5 * use[0]:
                 yield (amount, use)
                 amount += rng.randint(1, 2 + 2 * amount // 3)
-    
+
 
 suits = ['clubs', 'diamonds', 'hearts', 'spades']
 ranks = {'two' : 2, 'three' : 3 , 'four' : 4, 'five' : 5,
@@ -399,7 +401,7 @@ def winning_card_generator(seed):
     rng = random.Random(seed)
     for i in range(10000):
         hand = rng.sample(deck, 4)
-        for trump in ["spades", "hearts", "diamonds", "clubs", None]:            
+        for trump in ["spades", "hearts", "diamonds", "clubs", None]:
             yield (hand[:], trump)
 
 def hand_shape_distribution_generator(seed):
@@ -461,14 +463,14 @@ def reverse_reversed_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
         items = __create_list(1 + (i % 8), rng)
-        yield (items, )      
+        yield (items, )
 
 
 def scrabble_value_generator(seed):
     rng = random.Random(seed)
     f = open('words_sorted.txt', 'r', encoding='utf-8')
     words = [x.strip() for x in f]
-    f.close()    
+    f.close()
     for word in words:
         multipliers = [rng.randint(1, 3) for i in range(len(word))]
         yield (word, multipliers if rng.randint(0, 99) < 50 else None)
@@ -509,7 +511,7 @@ def collapse_intervals_generator(seed):
 
 def recaman_generator():
     yield (1000000,)
-    
+
 def __no_repeated_digits(n, allowed):
     n = str(n)
     for i in range(4):
@@ -518,7 +520,7 @@ def __no_repeated_digits(n, allowed):
         for j in range(i+1, 4):
             if n[i] == n[j]:
                 return False
-    return True    
+    return True
 
 def bulls_and_cows_generator(seed):
     rng = random.Random(seed)
@@ -571,7 +573,7 @@ def can_balance_generator(seed):
                     right.append(v)
                     rm += v * len(right)
             yield (left[::-1] + [rng.randint(1, i+2)] + right,)
-            
+
 
 def calkin_wilf_generator():
     for v in [10, 42, 255, 987, 7654, 12356]:
@@ -628,7 +630,7 @@ def brangelina_generator():
     for n1 in __names:
         for n2 in __names:
             yield (n1, n2)
-            
+
 def frequency_sort_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
@@ -655,7 +657,7 @@ def running_median_of_three_generator(seed):
         n = i + 2
         items = [rng.randint(1, n) for x in range(n)]
         yield (items,)
-        
+
 def iterated_remove_pairs_generator(seed):
     rng = random.Random(seed)
     for k in range(1000):
@@ -716,8 +718,8 @@ def factoring_factorial_generator(seed):
         yield (v,)
 
 def riffle_generator(seed):
-    for i in range(1000):
-        n = 2 + i // 10
+    for i in range(100):
+        n = 1 + i
         items = list(range(2 * n))
         yield (items[:], True)
         yield (items, False)
@@ -731,7 +733,7 @@ def words_with_given_shape_generator(seed):
         n = rng.randint(5, 10)
         pattern = [rng.randint(-1, 1) for j in range(n)]
         yield (words, pattern)
-        
+
 def squares_intersect_generator(seed):
     rng = random.Random(seed)
     for i in range(100000):
@@ -743,7 +745,7 @@ def squares_intersect_generator(seed):
         d2 = rng.randint(1, 10)
         s = 10 ** rng.randint(1, 2 + i // 10000)
         yield ((s*x1, s*y1, s*d1), (s*x2, s*y2, s*d2))
-        
+
 def only_odd_digits_generator(seed):
     rng = random.Random(seed)
     for i in range(3000):
@@ -810,9 +812,9 @@ def count_squares_generator(seed):
 def kempner_generator():
     for i in range(1, 1000, 10):
         yield (i,)
-        
-def tribonacci_generator():    
-    for i in range(1000):        
+
+def tribonacci_generator():
+    for i in range(1000):
         yield (i, (1, 1, 1))
         yield (i, (1, 0, 1))
         yield (i, (1, 2, 3))
@@ -833,14 +835,14 @@ def is_permutation_generator(seed):
                 items[j] = n + 1
             yield (items[:], n)
             items[j] = v
- 
+
 def three_summers_generator(seed):
     rng = random.Random(seed)
     for i in range(100):
         n = rng.randint(3, 20)
         items = [rng.randint(1, 10)]
         for i in range(1, n):
-            items.append(items[-1] + rng.randint(1, 20))      
+            items.append(items[-1] + rng.randint(1, 20))
         for goal in range(1, sum(items)):
             yield (items[:], goal)
 
@@ -874,7 +876,7 @@ def ztalloc_generator(seed):
 def sum_of_two_squares_generator(seed):
     for v in it.islice(scale_random(seed, 2, 5), 150):
         yield (v,)
-            
+
 def sum_of_distinct_cubes_generator(seed):
     for v in it.islice(scale_random(seed, 2, 5), 200):
         yield (v,)
@@ -913,7 +915,7 @@ def __key_dist():
     for cc1 in "abcdefghijklmnopqrstuvwxyz":
         for cc2 in "abcdefghijklmnopqrstuvwxyz":
             (r1, c1) = keys[cc1]
-            (r2, c2) = keys[cc2]            
+            (r2, c2) = keys[cc2]
             dist[(cc1, cc2)] = (abs(r2 - r1) + abs(c2 - c1))
     return dist
 
@@ -922,7 +924,7 @@ def autocorrect_word_generator(seed):
     words = [x.strip() for x in f]
     f.close()
     dist = __key_dist()
-    df = lambda c1, c2: dist[(c1, c2)] 
+    df = lambda c1, c2: dist[(c1, c2)]
     rng = random.Random(seed)
     for i in range(30):
         word = rng.choice(words)
@@ -931,19 +933,19 @@ def autocorrect_word_generator(seed):
             c = word[p]
             neighbours = [nc for nc in "abcdefghijklmnopqrstuvwxyz" if df(c, nc) == 1]
             word = word[:p] + rng.choice(neighbours) + word[p+1:]
-            yield (word, words, df)            
-            
-def pyramid_blocks_generator(seed):    
+            yield (word, words, df)
+
+def pyramid_blocks_generator(seed):
     n = 300
     ns = it.islice(scale_random(seed, 3, 10), n)
     ms = it.islice(scale_random(seed + 1, 3, 10), n)
     hs = it.islice(scale_random(seed + 2, 2, 15), n)
     yield from zip(ns, ms, hs)
-        
+
 def is_cyclops_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
-        d = rng.randint(1, 200)
+        d = rng.randint(1, i + 3)
         m = d // 2
         n = 0
         for j in range(d):
@@ -955,11 +957,11 @@ def is_cyclops_generator(seed):
                 n += rng.randint(1, 9)
         yield (n,)
 
-def words_with_letters_generator(seed):    
+def words_with_letters_generator(seed):
     rng = random.Random(seed)
     f = open('words_sorted.txt', 'r', encoding='utf-8')
     words = [x.strip() for x in f]
-    f.close()    
+    f.close()
     count = 0
     while count < 30:
         word = rng.choice(words)
@@ -978,8 +980,8 @@ def extract_increasing_generator(seed):
         digits = "".join([rng.choice("0123456789") for j in range(n)])
         yield (digits,)
 
-def square_follows_generator(seed):    
-    def emit():        
+def square_follows_generator(seed):
+    def emit():
         rng = random.Random(seed)
         curr = 1
         step = 3
@@ -997,7 +999,7 @@ def line_with_most_points_generator(seed):
             sx = rng.randint(1, n)
             sy = rng.randint(1, n)
             dx = rng.randint(-10, 10)
-            dy = rng.randint(-10, 10)            
+            dy = rng.randint(-10, 10)
             for i in range(rng.randint(1, 10)):
                 pts.add((sx, sy))
                 step = rng.randint(1, 10)
@@ -1053,15 +1055,15 @@ def minimize_sum_generator(seed):
             s += rng.choice("0123456789")
         for k in range(1, n + 1):
             yield (s, k)
-        
+
 def bridge_score_generator():
     for suit in ['clubs', 'hearts', 'spades', 'notrump']:
-        for level in range(1, 8):                    
+        for level in range(1, 8):
             for vul in [False, True]:
                 for dbl in ['', 'X', 'XX']:
                     for made in range(level, 8):
                         yield (suit, level, vul, dbl, made)
-        
+
 def max_checkers_capture_generator(seed):
     rng = random.Random(seed)
     for i in range(20):
@@ -1070,18 +1072,18 @@ def max_checkers_capture_generator(seed):
         for j in range(1, (n * n) // 3):
             while len(pieces) < j:
                 px = rng.randint(0, n-1)
-                py = rng.randint(0, n-1)                
+                py = rng.randint(0, n-1)
                 pieces.add((px, py))
             for x in range(n):
                 for y in range(n):
                     if (x, y) not in pieces:
                         yield (n, x, y, pieces)
-                        
+
 def collatzy_distance_generator():
     for i in range(1, 101):
         for j in range(1, 101):
             yield (i, j)
-            
+
 def nearest_smaller_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
@@ -1094,10 +1096,11 @@ def double_trouble_generator(seed):
     items = ['joe', 'bob', 42, 99]
     rng = random.Random(seed)
     curr, step = 1, 1
-    for i in range(1000):
+    for i in range(200):
         yield (items[:], curr)
         curr += rng.randint(1, step)
         step = step * 2
+        items.append(items[-1] + 1)
 
 def domino_cycle_generator(seed):
     rng = random.Random(seed)
@@ -1114,7 +1117,7 @@ def domino_cycle_generator(seed):
             else:
                 a = rng.randint(1, 6)
             tiles.append((a, rng.randint(1, 6)))
-        
+
 def van_eck_generator():
     curr = 1
     for i in range(23):
@@ -1126,8 +1129,8 @@ def suppressed_digit_sum_generator(seed):
     curr = 1
     for i in range(500):
         yield (curr,)
-        curr = 10 * curr + rng.randint(0, 9)        
-        
+        curr = 10 * curr + rng.randint(0, 9)
+
 def unscramble_generator(seed):
     rng = random.Random(seed)
     f = open('words_sorted.txt', 'r', encoding='utf-8')
@@ -1138,7 +1141,7 @@ def unscramble_generator(seed):
         w = rng.choice(words)
         if len(w) > 2 and len(w) < 9:
             first, mid, last = w[0], list(w[1:-1]), w[-1]
-            rng.shuffle(mid)            
+            rng.shuffle(mid)
             yield (words, first + "".join(mid) + last)
             count += 1
 
@@ -1173,7 +1176,7 @@ def substitution_words_generator(seed):
     f.close()
     yield ('ABCD', words)
     for i in range(100):
-        pat = ''        
+        pat = ''
         ll = int(sqrt(rng.randint(3*3, 10*10)))
         n = rng.randint(1, ll)
         for j in range(ll):
@@ -1181,13 +1184,13 @@ def substitution_words_generator(seed):
         yield (pat, words)
 
 def forbidden_substrings_generator(seed):
-    rng = random.Random(seed)    
+    rng = random.Random(seed)
     for i in range(100):
-        tabu = []        
+        tabu = []
         n = rng.randint(3, 7)
-        nn = rng.randint(2, n)        
+        nn = rng.randint(2, n)
         for j in range(rng.randint(1, n)):
-            pat = ''            
+            pat = ''
             for k in range(rng.randint(2, n)):
                 pat += ups[rng.randint(0, nn - 1)]
             tabu.append(pat)
@@ -1205,7 +1208,7 @@ def count_dominators_generator(seed):
 def optimal_crag_score_generator(seed):
     rng = random.Random(seed)
     for i in range(30):
-        rolls = []        
+        rolls = []
         for j in range(2 + (i % 7)):
             dice = tuple([rng.randint(1, 6) for k in range(3)])
             rolls.append(dice)
@@ -1233,7 +1236,7 @@ def bulgarian_solitaire_generator(seed):
                 total -= p
             result.sort(reverse = True)
             yield(result, k)
-    
+
 def manhattan_skyline_generator(seed):
     rng = random.Random(seed)
     for i in range(200):
@@ -1245,7 +1248,7 @@ def manhattan_skyline_generator(seed):
             h = rng.randint(1, 100)
             towers.append((s, e, h))
         yield(towers,)
-            
+
 def fractran_generator(seed):
     rng = random.Random(seed)
     conway = [(17, 91), (78, 85), (19, 51), (23, 38), (29, 33), (77, 29),
@@ -1265,7 +1268,7 @@ def fractran_generator(seed):
 
 def scylla_or_charybdis_generator(seed):
     rng = random.Random(seed)
-    for n in range(2, 10):        
+    for n in range(2, 10):
         for i in range(200):
             pos, result, = 0, ''
             for j in range(n * i):
@@ -1287,22 +1290,22 @@ def scylla_or_charybdis_generator(seed):
 
 def fractional_fit_generator(seed):
     rng = random.Random(seed+1)
-    for n in range(3, 12):        
+    for n in range(3, 12):
         for j in range(n*n):
             fs = []
             for i in range(n + 1):
                 a = rng.randint(0, n*n)
-                b = rng.randint(a + 1, n*n + 3)            
+                b = rng.randint(a + 1, n*n + 3)
                 fs.append((a, b))
-            yield (fs,)           
-            
+            yield (fs,)
+
 def count_overlapping_disks_generator(seed):
     rng = random.Random(seed)
     for n in range(3, 150):
         d = 2 * n
         for i in range(10):
             disks = set()
-            while len(disks) < n:                
+            while len(disks) < n:
                 x = rng.randint(-d, d)
                 y = rng.randint(-d, d)
                 r = rng.randint(1, n)
@@ -1336,13 +1339,13 @@ def arithmetic_progression_generator(seed):
         yield (sorted(list(elems)), )
         if i % 10 == 0:
             m += 1
-     
+
 def connected_islands_generator(seed):
     rng = random.Random(seed)
-    for n in range(6, 100):        
+    for n in range(6, 100):
         for m in range(n // 2, n):
             bridges = set()
-            while len(bridges) < m:            
+            while len(bridges) < m:
                 s = rng.randint(0, n-1)
                 e = rng.randint(0, n-1)
                 if s != e:
@@ -1371,7 +1374,7 @@ def eliminate_neighbours_generator(seed):
         items.append(i)
         rng.shuffle(items)
         yield (items[:], )
-        
+
 def counting_series_generator(seed):
     rng = random.Random(seed)
     curr, step = 0, 2
@@ -1382,7 +1385,7 @@ def counting_series_generator(seed):
 
 def __zigzag(rng, len_, prob):
     curr = rng.randint(1, 8)
-    d = rng.choice([+1, -1])            
+    d = rng.choice([+1, -1])
     for k in range(len_):
         last = curr % 10
         dd = d if rng.randint(1, 100) < prob else -d
@@ -1406,7 +1409,7 @@ def is_zigzag_generator(seed):
 def next_zigzag_generator(seed):
     rng = random.Random(seed)
     for k in range(100):
-        for i in range(100):        
+        for i in range(100):
             curr = rng.randint(1, 8)
             d = rng.choice([+1, -1])
             last = 0
@@ -1453,7 +1456,7 @@ def hourglass_flips_generator(seed):
             curr += rng.randint(1, 5)
         t = rng.randint(curr + 1, 2 * curr)
         yield (glasses, t)
-      
+
 def knight_jump_generator(seed):
     rng = random.Random(seed)
     for i in range(10000):
@@ -1468,7 +1471,7 @@ def knight_jump_generator(seed):
             end[rng.randint(0, k - 1)] += 1
         steps.sort(reverse = True)
         yield (tuple(steps), tuple(start), tuple(end))
-        
+
 def frog_collision_time_generator(seed):
     rng = random.Random(seed)
     count = 0
@@ -1485,11 +1488,11 @@ def frog_collision_time_generator(seed):
             else:
                 y1 += rng.choice([-10, 10])
         elif rng.randint(1, 100) < 10:
-            c[2], c[3] = -c[2], -c[3]    
+            c[2], c[3] = -c[2], -c[3]
         if (x1, x2) != (y1, y2):
             yield ((x1, y1, -c[2], -c[3]), (x2, y2, -c[4], -c[5]))
             count += 1
-        
+
 def spread_the_coins_generator(seed):
     rng = random.Random(seed)
     for i in range(2, 500):
@@ -1503,7 +1506,7 @@ def spread_the_coins_generator(seed):
         a = rng.randint(1, u - 1)
         b = u - a
         yield (piles, a, b)
-    
+
 
 def group_and_skip_generator(seed):
     rng = random.Random(seed)
@@ -1511,10 +1514,10 @@ def group_and_skip_generator(seed):
         b = rng.randint(1, 10)
         a = 2 * b + rng.randint(1, 10)
         yield (n*n, a, b)
-        
+
 def nearest_polygonal_number_generator(seed):
     rng = random.Random(seed)
-    yield from [(1, 10), (1, 100), (1, 10**100)]    
+    yield from [(1, 10), (1, 100), (1, 10**100)]
     curr = 20
     for i in range(250):
         for j in range(15):
@@ -1525,14 +1528,14 @@ def nearest_polygonal_number_generator(seed):
 
 def floor_power_solve_generator(seed):
     yield from [(2018, 4), (2011, 4)]
-    rng = random.Random(seed)    
+    rng = random.Random(seed)
     curr = 30
     for i in range(140):
         for j in range(10):
             curr = curr + rng.randint(1, curr // 10)
             yield (curr, j + 2)
         curr = curr * 2
-            
+
 def subtract_square_generator(seed):
     rng = random.Random(seed)
     for i in range(1, 9):
@@ -1542,7 +1545,7 @@ def subtract_square_generator(seed):
             query.append(curr)
             curr = (4 * curr) // 3 + rng.randint(1, max(3, curr // 5))
         yield (query, )
-        
+
 def perimeter_limit_split_generator(seed):
     rng = random.Random(seed)
     for a in range(10, 100):
@@ -1599,17 +1602,17 @@ def permutation_cycles_generator(seed):
             rng.shuffle(perm)
             yield (perm,)
 
-# List of test cases for the 109 functions defined.        
-          
-testcases = [    
-        # The original 109 problems. These are not in order.        
-        
+# List of test cases for the 109 functions defined.
+
+testcases = [
+        # The original 109 problems. These are not in order.
+
         # Removed from problem set April 20, 2020
         # (
         # "connected_islands",
         # connected_islands_generator(seed),
-        # "ceafc55f58a4f921582cf6fcd2c856851fca7444541e5024d1"                
-        # ),        
+        # "ceafc55f58a4f921582cf6fcd2c856851fca7444541e5024d1"
+        # ),
         (
         "arithmetic_progression",
         arithmetic_progression_generator(seed),
@@ -1619,47 +1622,47 @@ testcases = [
         "count_overlapping_disks",
         count_overlapping_disks_generator(seed),
         "18e8f5385fdc28a755dcad2167790f1177a3f4851760aa4285"
-        ),        
+        ),
         (
         "fractional_fit",
         fractional_fit_generator(seed),
         "856627cc444098c9386367d5f250c0e2cddbf3ef0ecec3ba11"
-        ),        
+        ),
         (
         "scylla_or_charybdis",
         scylla_or_charybdis_generator(seed),
         "ac773070f2e2a560e487aae218da4d37c287395865d0c44ec7"
-        ),        
+        ),
         (
         "fractran",
         fractran_generator(seed),
         "4a5b2e7dee7eec27bdfdfa6748a4df2e4a06343cef38dd4ef1"
-        ),        
+        ),
         (
         "manhattan_skyline",
         manhattan_skyline_generator(seed),
-        "16609bdb523fae4ff85f8d36ffd1fcfa298bde94b95ca2917c"       
+        "16609bdb523fae4ff85f8d36ffd1fcfa298bde94b95ca2917c"
         ),
         (
         "bulgarian_solitaire",
         bulgarian_solitaire_generator(seed),
-        "187f2c702e6bbf306dcc655534a307e92b230505ea159c7e73"        
-        ),        
+        "187f2c702e6bbf306dcc655534a307e92b230505ea159c7e73"
+        ),
         (
         "sum_of_distinct_cubes",
         sum_of_distinct_cubes_generator(seed),
         "d1ed5e8a0688116c7536b01804d09378a13559a0d6a9427ddf"
-        ),  
+        ),
         (
         "tukeys_ninthers",
         tukeys_ninthers_generator(seed),
         "921de1acfc8f515bea0680f631bcdca4510d1e7957f3c1d0d1"
-        ),         
+        ),
         (
         "optimal_crag_score",
-        optimal_crag_score_generator(seed),        
+        optimal_crag_score_generator(seed),
         "5eec80a1d286c8d129cbd9444f2bff3776d3e2e4277fb1e329"
-        ),        
+        ),
         (
         "count_dominators",
         count_dominators_generator(seed),
@@ -1669,17 +1672,17 @@ testcases = [
         "forbidden_substrings",
         forbidden_substrings_generator(seed),
         "951cea3c20623874b27017d589c5d7ac1f99ac5af5c3b3f6c1"
-        ),        
+        ),
         (
         "substitution_words",
         substitution_words_generator(seed),
         "ce3286c3c0df978b9f8f508476e6f1bcba3dd30cdb35602acf"
-        ),        
+        ),
         (
         "taxi_zum_zum",
         taxi_zum_zum_generator(seed),
         "2fb59c4b26bb42d777436fe2826e5faabf0139710d38569c8c"
-        ),         
+        ),
         (
         "midnight",
         midnight_generator(seed),
@@ -1689,70 +1692,70 @@ testcases = [
         "crag_score",
         crag_score_generator(),
         "ea62d9694e079b948a8b622c8f6dfd2aeebddeebc59c575721"
-        ),        
+        ),
         (
         "unscramble",
         unscramble_generator(seed),
         "5859988a905549959fd6905cc038e0ad214812a6444d702713"
         ),
-        # Removed from problem set April 20, 2020 
+        # Removed from problem set April 20, 2020
         # (
         # "suppressed_digit_sum",
         # suppressed_digit_sum_generator(seed),
         # "69130744180a37dae42a668f28a3aa95dd53522662e058f2cf"
-        # ),        
+        # ),
         (
         "van_eck",
         van_eck_generator(),
         "db1a6665205f46d0e80da4e1ff9926d01b33b04112013bdf43"
-        ),        
+        ),
         (
         "domino_cycle",
         domino_cycle_generator(seed),
         "a584eae620badb493239fd0bebbfa7c8c17c12b3bc0f53f873"
-        ),        
+        ),
         (
         "double_trouble",
         double_trouble_generator(seed),
-        "52f124d5b3d6790604a1afdd22899f0a172ccf94489deea09d"
-        ),        
+        "49f103a7ad2c26d800d61e8645f967408a18c37cc6303a9dfc"
+        ),
         (
         "nearest_smaller",
         nearest_smaller_generator(seed),
         "b0c97910c2f5b4743d8b8d88b11243f79a612a34bc072f5862"
-        ),        
+        ),
         (
         "collatzy_distance",
         collatzy_distance_generator(),
         "f9489bca0de5fc512ea370d7cddd90b04aaa718f105d68441b"
-        ),        
+        ),
         (
         "max_checkers_capture",
         max_checkers_capture_generator(seed),
         "a5221ae1753c13f587735ab72dd8551e61d27125aa2b913385"
         ),
-        # Removed from problem set April 20, 2020        
+        # Removed from problem set April 20, 2020
         # (
         # "bridge_score",
         # bridge_score_generator(),
         # "1d1e3f4be9fec5fd85d87f7dcfa8c9e40b267c4de49672c65f"
         # ),
-        # Removed from problem set April 20, 2020        
+        # Removed from problem set April 20, 2020
         # (
         # "minimize_sum",
         # minimize_sum_generator(seed),
         # "7e6257c998d5842ec41699b8b51748400a15e539083e5a0a20"
-        # ),                       
+        # ),
         (
         "count_growlers",
         count_growlers_generator(seed),
         "b7f1eb0877888b0263e3b2a923c9735a72347f4d817a0d38b1"
-        ),        
+        ),
         (
         "kempner",
         kempner_generator(),
         "dfbf6a28719818c747e2c8e888ff853c2862fa8d99683c0815"
-        ),         
+        ),
         (
         "words_with_letters",
         words_with_letters_generator(seed),
@@ -1763,12 +1766,12 @@ testcases = [
         # "count_distinct_lines",
         # count_distinct_lines_generator(seed),
         # "c79db2f41e798a652e3742ef2a2b29801f0b3e52f4e285aa4e"
-        # ),        
+        # ),
         (
         "line_with_most_points",
         line_with_most_points_generator(seed),
         "40eab89aca1bfd182e9e2f2d8204306587b94d0cfaef041c36"
-        ),        
+        ),
         (
         "count_maximal_layers",
         count_maximal_layers_generator(seed),
@@ -1778,17 +1781,17 @@ testcases = [
         "square_follows",
         square_follows_generator(seed),
         "7b42ad97e654f023efeb0174c76d3f02f42a69615e90af31a3"
-        ),        
+        ),
         (
         "extract_increasing",
         extract_increasing_generator(seed),
         "8f6ba301734d90b6a3685ae27b342ac481af80201ac35cd776"
-        ),                    
+        ),
         (
         "is_cyclops",
         is_cyclops_generator(seed),
-        "cce4d4674f4efb6ac20e07eae66b9892341d0a953f87d98287"
-        ),        
+        "5ced8d0e69d88367f1ee05f96bf6ea7fad6e1c522d0544b526"
+        ),
         (
         "pyramid_blocks",
         pyramid_blocks_generator(seed),
@@ -1798,22 +1801,22 @@ testcases = [
         "autocorrect_word",
         autocorrect_word_generator(seed),
         "be332e39f5a8a3431e913794d15f14b8a89b1153d89d94946a"
-        ),        
+        ),
         (
         "remove_after_kth",
         remove_after_kth_generator(seed),
         "4988a0cea5800a5ffaf72f726388afd99192d04b4578289595"
-        ),        
+        ),
         (
         "seven_zero",
         seven_zero_generator(),
         "2cbae9ac1812d155ee34be3f908001b148bdf635109a38981e"
-        ),        
+        ),
         (
         "count_distinct_sums_and_products",
         count_distinct_sums_and_products_generator(seed),
         "b75370cf5c3d2c307585937311af34e8a7ad44ea82c032786d"
-        ),      
+        ),
         (
         "sum_of_two_squares",
         sum_of_two_squares_generator(seed),
@@ -1821,40 +1824,40 @@ testcases = [
         ),
         # Removed from problem set April 20, 2020
         # (
-        # "scrabble_value",        
+        # "scrabble_value",
         # scrabble_value_generator(seed),
         # "b8b08a8a1a5fd687c49c5f7147fd35bc16d4c3ac88328ada64"
-        # ),        
+        # ),
         (
         "reverse_vowels",
         random_text_generator(seed),
         "06f67d9ccd7f91b25b023d9fccd4d0622195f15f1375da16dc"
-        ),        
+        ),
         (
         "riffle",
-        riffle_generator(seed),                
-        "53f8b9eda610525fc17d1ba2dc60150c8f8c98f31cf3420550"
-        ),              
+        riffle_generator(seed),
+        "bd3f7e2df596e742e43f3eb1cd80c2e52ca9f20c2b33f69c7d"
+        ),
         (
         "ztalloc",
         ztalloc_generator(seed),
         "b6336106ac97b9ec4306c77c7e28775b0e1194e75dd10ee219"
-        ),        
+        ),
         (
         "losing_trick_count",
         losing_trick_count_generator(seed),
         "814fa798f0de0d1c847b0622fc21a88047d19e427ebe1d16cf"
-        ),           
+        ),
         (
         "postfix_evaluate",
         postfix_evaluate_generator(seed),
         "a9d473505f7a9c8458e6fbb7b3b75a56efabe1a0d3ced3d901"
-        ),         
+        ),
         (
         "three_summers",
         three_summers_generator(seed),
         "d9d7f6ab17a31bf37653fb4f8504a39464debdde6fed786bee"
-        ), 
+        ),
         # Removed from problem set April 20, 2020
         # (
         # "is_permutation",
@@ -1872,12 +1875,12 @@ testcases = [
         # "tribonacci",
         # tribonacci_generator(),
         # "ac64825e938d5a3104ea4662b216285f05a071cde8fd82c6fd"
-        # ),             
+        # ),
         (
         "count_squares",
         count_squares_generator(seed),
         "69c94bb56d9eff5bc9cdfc4890718606c0a8bdf242c3440d98"
-        ),        
+        ),
         (
         "count_carries",
         count_carries_generator(seed),
@@ -1887,14 +1890,14 @@ testcases = [
         "lattice_paths",
         lattice_paths_generator(seed),
         "dbca1d47adc5713b65fcb90dd9ddf1d747f521eccf341289a4"
-        ),        
+        ),
         (
         "pancake_scramble",
         pancake_scramble_generator(seed),
         "98fb3c9e30908ea6c2654d64d3c68ca2538927be529d75ddfe"
-        ),        
+        ),
         (
-        "only_odd_digits",                
+        "only_odd_digits",
         only_odd_digits_generator(seed),
         "24d656750cff73ad12fa9ff8320bbae662c2fbb5a6f4ece514"
         ),
@@ -1902,12 +1905,12 @@ testcases = [
         "squares_intersect",
         squares_intersect_generator(seed),
         "0ad0e8b2971f3cafc93c37e2bd618e94d66312da64f4bd6755"
-        ),        
+        ),
         (
         "rooks_with_friends",
         rooks_with_friends_generator(seed),
         "e9cdb7f319ce483f5196eaa17dcfbab5b01b75551830088a66"
-        ),        
+        ),
         (
         "safe_squares_rooks",
         safe_squares_generator(seed),
@@ -1935,55 +1938,55 @@ testcases = [
         count_and_say_generator(seed),
         "9a99c40999726ec420a29287304f8ec811d590625fcb69d625"
         ),
-        # Removed from problem set April 20, 2020        
+        # Removed from problem set April 20, 2020
         # (
         # "maximum_difference_sublist",
         # maximum_difference_sublist_generator(seed),
         # "e0e49c2c4d5ad7580fe42a71a411e8449d84c9bfd2a2b13df3"
-        # ),        
+        # ),
         (
         "first_preceded_by_smaller",
         first_preceded_by_smaller_generator(seed),
         "40ebe484996f84edb425c1a3ae5d70aa62ad308a09e926622b"
-        ),        
+        ),
         (
-        "words_with_given_shape",                
+        "words_with_given_shape",
         words_with_given_shape_generator(seed),
         "96d697cd85e4effa24f659b83b18aa1adf14a1b9e14c02207b"
-        ),        
+        ),
         (
         "prime_factors",
         prime_factors_generator(seed),
         "fbb31e68d216d7430c47a3e3ac9eb0d4240ef2ae698eb2ded4"
-        ),  
+        ),
         (
         "fibonacci_sum",
         fibonacci_sum_generator(seed),
         "bb13f872b52611a389234d48ad1a19ddea88bedb01ddb08a43"
-        ),  
+        ),
         (
         "factoring_factorial",
         factoring_factorial_generator(seed),
         "be5d5249b396c259bde5338de73ae4d29831314d6c0fb9e369"
-        ),        
+        ),
         (
         "bridge_hand_shorthand",
         bridge_hand_shorthand_generator(seed),
         "68459ff71e28b24e43df3f632706fabcda7403359d7d4d9255"
-        ),        
+        ),
         (
         "milton_work_point_count",
         milton_work_point_count_generator(seed),
         "5694509170df1fef10bbb60641b7906e220d951b73d3072f7e"
         ),
-        # Removed from problem set April 20, 2020        
+        # Removed from problem set April 20, 2020
         # (
         # "highest_n_scores",
         # highest_n_scores_generator(seed),
         # "978ce1599544e991c1cdc5824a762ffbed54ebcee76ca87821"
         # ),
         (
-        "count_divisibles_in_range",        
+        "count_divisibles_in_range",
         count_divisibles_in_range_generator(seed),
         "4c3246091a84e8b3310c8c9bff017d2fab854e2248a05fab30"
         ),
@@ -1993,11 +1996,11 @@ testcases = [
         "15112b8c5374e1ebcf8d67bf391f3528c29a3ac3ece70ac5c1"
         ),
         (
-        "is_perfect_power",                
+        "is_perfect_power",
         is_perfect_power_generator(seed),
         "31baeffbf7aac8f1506fb1c4f70236abc5adc902e1a564724a"
         ),
-        # Removed from problem set April 20, 2020          
+        # Removed from problem set April 20, 2020
         # (
         # "iterated_remove_pairs",
         # iterated_remove_pairs_generator(seed),
@@ -2019,7 +2022,7 @@ testcases = [
         "540f8b17005ed2cb3a40c49304eeb324e9aa0db81adf830bd0"
         ),
         (
-        "count_consecutive_summers",         
+        "count_consecutive_summers",
         count_consecutive_summers_generator(),
         "3ade63a194b40ff5aa1b53642eee754d30f2ab48ef77330540"
         ),
@@ -2027,11 +2030,11 @@ testcases = [
         "brangelina",
         brangelina_generator(),
         "fdbbfd7aa2ebcb989862f4e23defc6cafd4aca55ce3235a463"
-        ),        
+        ),
         (
         "balanced_ternary",
         balanced_ternary_generator(seed),
-        "842084fa88061721ede89bef0e1fef414b55fceb580e3d1735"       
+        "842084fa88061721ede89bef0e1fef414b55fceb580e3d1735"
         ),
         (
         "josephus",
@@ -2043,17 +2046,17 @@ testcases = [
         aliquot_sequence_generator(),
         "5942bb5b3dc190eaddff33df990de03666441706387cde0d7e"
         ),
-        # Removed from problem set April 20, 2020        
+        # Removed from problem set April 20, 2020
         # (
         # "all_cyclic_shifts",
         # all_cyclic_shifts_generator(),
         # "1d06f1ef0547d8441800f2dc19aa430396a0f2e8bc414e6775"
-        # ),               
+        # ),
         (
         "fibonacci_word",
         fibonacci_word_generator(seed),
         "b6385c1cb1a88f2392f507cae3bc302c468d5747af8802e410"
-        ),        
+        ),
         (
         "create_zigzag",
         create_zigzag_generator(seed),
@@ -2063,7 +2066,7 @@ testcases = [
         "calkin_wilf",
         calkin_wilf_generator(),
         "e5ff0851c0830b72802a818eeaec66711b6e3b91a004263674"
-        ),        
+        ),
         (
         "can_balance",
         can_balance_generator(seed),
@@ -2074,12 +2077,12 @@ testcases = [
         # "contains_bingo",
         # contains_bingo_generator(seed),
         # "c352ce01918d0d47ca13adedf25556e5fd4ab1f672e07bc52f"
-        # ),        
+        # ),
         (
         "bulls_and_cows",
         bulls_and_cows_generator(seed),
         "e00ca4cd1996a51ef5cd5588a7facd0a00f2e3f3946d5f4e96"
-        ),        
+        ),
         (
         "recaman",
         recaman_generator(),
@@ -2089,7 +2092,7 @@ testcases = [
         "collapse_intervals",
         collapse_intervals_generator(seed),
         "36e0b7bcddde70272108b2f7daeb504d71edee1146b7a1a5d0"
-        ),        
+        ),
         (
         "expand_intervals",
         expand_intervals_generator(seed),
@@ -2099,9 +2102,9 @@ testcases = [
         "reverse_ascending_sublists",
         reverse_ascending_sublists_generator(seed),
         "b4cbb1ed5006364e68d8875e733abeec1241165d7b84402f62"
-        ),       
+        ),
         (
-        "reverse_reversed",       
+        "reverse_reversed",
         reverse_reversed_generator(seed),
         "c3ec2d6688cc38e8ad384ed5cbf5dabc663dbf9e97d7608367"
         ),
@@ -2115,14 +2118,14 @@ testcases = [
         # "group_equal",
         # group_equal_generator(seed),
         # "242fac179412d7ad82bebadbd74ac7d0044b33942a714870b9"
-        # ),        
+        # ),
         (
-        "ryerson_letter_grade",        
+        "ryerson_letter_grade",
         ryerson_letter_grade_generator(),
         "b9b86a019c4502be825b0ed52c187f9a29106a08fbbb1ffcc6"
         ),
         (
-        "is_ascending",        
+        "is_ascending",
         is_ascending_generator(seed),
         "0ec304f7cd0d1b7a4460570947b05af1756a2510a5ba5ba9f1"
         ),
@@ -2130,7 +2133,7 @@ testcases = [
         "double_until_all_digits",
         double_until_all_digits_generator(),
         "7c4ba46364765cb0679f609d428bbbae8ba0df440b001c4162"
-        ),        
+        ),
         (
         "give_change",
         give_change_generator(seed),
@@ -2162,19 +2165,19 @@ testcases = [
         # "sort_by_typing_handedness",
         # sort_by_typing_handedness_generator(),
         # "919973a60cc556525aa38082a607f9981e83e5a58944d084af"
-        # ),              
+        # ),
         (
         "possible_words",
-        possible_words_generator(seed),  
+        possible_words_generator(seed),
         "f5fcb8d31014ed4dd3b618a08423b1370d80e171bd2d96f7d8"
         ),
-        
+
         # New additions to the problem set in 2020.
-        
+
         (
         "cookie",
         cookie_generator(seed),
-        "ef5d2cc98a988383fdd167ac0ab2305312133dd57e9045cebe"        
+        "ef5d2cc98a988383fdd167ac0ab2305312133dd57e9045cebe"
         ),
         (
         "eliminate_neighbours",
@@ -2189,7 +2192,7 @@ testcases = [
         (
         "is_zigzag",
         is_zigzag_generator(seed),
-        "fe5e03401a32bc5ca989759708d10a7f9d2cbd9e4821566b91"        
+        "fe5e03401a32bc5ca989759708d10a7f9d2cbd9e4821566b91"
         ),
         (
         "next_zigzag",
@@ -2204,7 +2207,7 @@ testcases = [
         (
         "wythoff_array",
         wythoff_array_generator(seed),
-        "d9c276aee0a2914dc393b0fce677b859d3fd98e996a7bd924d"        
+        "d9c276aee0a2914dc393b0fce677b859d3fd98e996a7bd924d"
         ),
         (
         "hourglass_flips",
@@ -2214,43 +2217,43 @@ testcases = [
         (
         "knight_jump",
         knight_jump_generator(seed),
-        "6a771380844685c2356a8a1eaf97376132aeb6f112bd6f6836"        
+        "6a771380844685c2356a8a1eaf97376132aeb6f112bd6f6836"
         ),
         (
         "frog_collision_time",
         frog_collision_time_generator(seed),
-        "2767a8f92c414656971210a1beeb83f20ad197d445897aff10"        
+        "2767a8f92c414656971210a1beeb83f20ad197d445897aff10"
         ),
         (
         "spread_the_coins",
         spread_the_coins_generator(seed),
-        "5fceeacd218e1529190ff6477d81313150ff9a79910984c9de"                
-        ), 
+        "5fceeacd218e1529190ff6477d81313150ff9a79910984c9de"
+        ),
         (
         "group_and_skip",
         group_and_skip_generator(seed),
-        "6f1dbf73dc63c5c0c2b5cebba4e2aa2e78da9c909e186ccfec"      
+        "6f1dbf73dc63c5c0c2b5cebba4e2aa2e78da9c909e186ccfec"
         ),
         (
         "nearest_polygonal_number",
         nearest_polygonal_number_generator(seed),
-        "6813a79fcc5c8249e92e0bf4c1301fde4187df58d2207b23ca"        
+        "6813a79fcc5c8249e92e0bf4c1301fde4187df58d2207b23ca"
         ),
         # Removed from problem set July 8, 2020
         #(
         #"floor_power_solve",
         #floor_power_solve_generator(seed),
-        #"177465906587f4bb545d546d9b9e4324a4fcbc46c2d3ec4a97"       
+        #"177465906587f4bb545d546d9b9e4324a4fcbc46c2d3ec4a97"
         #),
         (
         "subtract_square",
         subtract_square_generator(seed),
-        "8959f61972a8804d0b26e2ae92d30d4d3fb6f08f1bcf5e28b9"      
+        "8959f61972a8804d0b26e2ae92d30d4d3fb6f08f1bcf5e28b9"
         ),
         (
         "perimeter_limit_split",
         perimeter_limit_split_generator(seed),
-        "eaddf8ce7e7dd40995a6be7c73d89873b47864d6fcf3d14bb9"      
+        "eaddf8ce7e7dd40995a6be7c73d89873b47864d6fcf3d14bb9"
         ),
         (
         "duplicate_digit_bonus",
@@ -2278,13 +2281,11 @@ print(f"109 Python Problems tester, {version}, Ilkka Kokkarinen.")
 try:
     exec(f"import {studentfile} as labs109")
 except Exception as e:
-    print(f"ERROR: Unable to find file {studentfile}.py. Exiting...")
+    print(f"ERROR: Unable to import {studentfile}.py. Exiting...")
     print(f"{e}")
     exit(1)
 
-import os.path
-
-#discrepancy(labs109.ryerson_letter_grade, ryerson_letter_grade,
+# discrepancy(labs109.ryerson_letter_grade, ryerson_letter_grade,
 #            ryerson_letter_grade_generator(), True)
 
 if os.path.exists(recordfile):
@@ -2296,7 +2297,7 @@ if os.path.exists(recordfile):
                 curr = line[4:]
                 known[curr] = []
             else:
-                known[curr].append(line)    
+                known[curr].append(line)
     test_all_functions(labs109, testcases, known = known)
 else:
     with gzip.open(recordfile, 'wt') as rf:
