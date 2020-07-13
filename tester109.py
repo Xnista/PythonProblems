@@ -2,6 +2,22 @@
 # "109 Python Problems for CCPS 109" by Ilkka Kokkarinen.
 # Ilkka Kokkarinen, ilkka.kokkarinen@gmail.com
 
+# For instructors who want to add their own problems to this set:
+#
+# 1. Set the value of use_record to False.
+# 2. Write your private solution function to top of labs109.py file.
+# 3. Write the test generator function in this script below.
+# 4. Add the individual test into the testcases list below, using
+#    None as its expected checksum.
+# 5. Run this test script.
+# 6. Replace None in the test case with the checksum from output.
+# 7. Run this test script to make sure the test passes.
+# 8. Set the value of use_record back to True.
+# 9. Delete the record file from the same folder this script is in.
+# 10. Run this test script to generate a new record file.
+# 11. Run this test script once more to ensure everything works.
+# 12. Release to students.
+
 from hashlib import sha256
 from time import time
 import itertools as it
@@ -20,11 +36,7 @@ testcase_cutoff = 300
 # Name of the file that contains the expected correct answers.
 recordfile = 'record'
 
-# Whether to use the recorded test results when they exist. This
-# needs to be set to false only when editing the test case
-# generator for a new or an existing problem. Once you have
-# added the new problem, set this to True and delete the record
-# file, and then run this tester to generate the record file.
+# Whether to use the recorded test results when they exist.
 use_record = True
 
 # Name of the module that contains the student solutions.
