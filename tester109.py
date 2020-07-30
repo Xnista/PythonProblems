@@ -12,20 +12,20 @@
 # 5. Run this test script.
 # 6. Replace None in the test case with the checksum printed.
 # 7. Run this test script again to make sure the test passes.
-# 8. Set the value of use_record back to True.
-# 9. Once you have done the above for all the functions that you
-#    want to add, delete the record file from the same folder
-#    that this script is in.
+# 8. Once you have done the above for all the functions that you
+#    want to add, set the value of use_record back to True.
+# 9. Selete the record file from the same folder that this script
+#    is located in.
 # 10. Run this test script to generate the new record file.
 # 11. Release the new version of tester and record to students.
 
-# When writing the test case generator for your problem, remember
-# that each test case must be a tuple, even if it is a singleton.
-# So instead of saying
+# When writing the test case generator for each problem, remember
+# that each test case must be a tuple, even if it contains only
+# one argument for the call. So instead of saying
 #
 # yield x
 #
-# always remember to say instead
+# always remember to say
 #
 # yield (x,)
 
@@ -37,7 +37,8 @@ import gzip
 import os.path
 from math import sqrt
 
-version = "July 19, 2020"
+# The release date of this version of the CCPS109 tester.
+version = "July 30, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
@@ -118,7 +119,7 @@ def discrepancy(teacher, student, testcases, stop_at_first=False):
         else:
             print(f"For {n} test cases, found {disc} discrepancies.")
             print("Shortest discrepancy input was:")
-        print(shortest)
+        emit_args(shortest)
         print(f"Model  : {repr(d1)}")
         print(f"Student: {repr(d2)}")
         return False
@@ -212,7 +213,7 @@ def test_all_functions(module, suite, recorder=None, known=None):
         print("IF YOU ARE A STUDENT, YOU SHOULD NOT BE SEEING THIS")
         print(f"MESSAGE! MAKE SURE THAT THE FILE {recordfile} FROM THE")
         print("PLACE WHERE YOU DOWNLOADED THIS AUTOMATED TESTER IS")
-        print("PROPERLY DOWNLOADED INTO THIS WORKING DIRECTORY!")
+        print("PROPERLY DOWNLOADED INTO THIS SAME WORKING DIRECTORY!")
         print()
     count, total = 0, 0
     for (fname, testcases, expected) in sort_by_source(suite):
@@ -487,14 +488,18 @@ def possible_words_generator(seed):
     words = [x.strip() for x in f]
     f.close()
     rng = random.Random(seed)
-    for i in range(100):
-        k = rng.randint(1, 10)
-        guessed = set(rng.sample(lows, k))
+    n = 0
+    while n < 100:
         patword = rng.choice(words)
-        pat = ''
-        for ch in patword:
-            pat += ch if ch in guessed else '*'
-        yield (words, pat)
+        letters = set(c for c in patword)
+        if len(letters) > 3:
+            k = len(letters) - rng.randint(1, len(letters) - 3)
+            guessed = rng.sample(list(letters), k)
+            pat = ''
+            for ch in patword:
+                pat += ch if ch in guessed else '*'
+            yield (words, pat)
+            n += 1
 
 
 def postfix_evaluate_generator(seed):
@@ -681,7 +686,7 @@ def all_cyclic_shifts_generator():
 
 
 def aliquot_sequence_generator():
-    for i in range(1, 100):
+    for i in range(1, 130):
         yield (i, 10)
         yield (i, 100)
 
@@ -2222,7 +2227,7 @@ testcases = [
     (
      "aliquot_sequence",
      aliquot_sequence_generator(),
-     "5942bb5b3dc190eaddff33df990de03666441706387cde0d7e"
+     "17f910bff400bb0305e94c79e27fda857c5723385d73f2ccc4"
     ),
     # Removed from problem set April 20, 2020
     # (
@@ -2347,7 +2352,7 @@ testcases = [
     (
      "possible_words",
      possible_words_generator(seed),
-     "f5fcb8d31014ed4dd3b618a08423b1370d80e171bd2d96f7d8"
+     "5e16d48131c5a893f4be2ec84846984f345491872109c522cd"
     ),
 
     # New additions to the problem set in 2020.
@@ -2464,8 +2469,8 @@ except Exception as e:
     exit(1)
 
 
-# discrepancy(labs109.domino_cycle, domino_cycle,
-#            domino_cycle_generator(seed), False)
+# discrepancy(labs109.lattice_paths, lattice_paths,
+#             lattice_paths_generator(seed), False)
 
 if os.path.exists(recordfile):
     known, curr = dict(), ''
