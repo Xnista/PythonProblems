@@ -491,10 +491,10 @@ def possible_words_generator(seed):
     n = 0
     while n < 100:
         patword = rng.choice(words)
-        letters = set(c for c in patword)
+        letters = sorted(list(set(c for c in patword)))
         if len(letters) > 3:
             k = len(letters) - rng.randint(1, len(letters) - 3)
-            guessed = rng.sample(list(letters), k)
+            guessed = rng.sample(letters, k)
             pat = ''
             for ch in patword:
                 pat += ch if ch in guessed else '*'
@@ -2352,7 +2352,7 @@ testcases = [
     (
      "possible_words",
      possible_words_generator(seed),
-     "5e16d48131c5a893f4be2ec84846984f345491872109c522cd"
+     "cfa8461a50dbbf1492c53c2909fdc26f79b001921d3a111df3"
     ),
 
     # New additions to the problem set in 2020.
