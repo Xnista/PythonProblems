@@ -38,14 +38,13 @@ import os.path
 from math import sqrt
 
 # The release date of this version of the CCPS109 tester.
-version = "August 7, 2020"
+version = "August 10, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
 
 # How many test cases to record in the file for each function.
 testcase_cutoff = 300
-
 # Name of the file that contains the expected correct answers.
 recordfile = 'expected_answers'
 
