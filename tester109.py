@@ -38,7 +38,7 @@ import os.path
 from math import sqrt
 
 # The release date of this version of the CCPS109 tester.
-version = "July 30, 2020"
+version = "August 7, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
@@ -47,7 +47,7 @@ seed = 12345
 testcase_cutoff = 300
 
 # Name of the file that contains the expected correct answers.
-recordfile = 'record'
+recordfile = 'expected_answers'
 
 # Whether to use the recorded test results when they exist.
 use_record = True
@@ -81,7 +81,7 @@ def emit_args(args, cutoff=100):
             else:
                 left = ", ".join([str(x) for x in a[:5]])
                 right = ", ".join([str(x) for x in a[-5:]])
-                print(f"[{left}, [{len(a)-10} omitted...], {right}]", end='')
+                print(f"[{left}, <{len(a)-10} omitted...>, {right}]", end='')
         else:
             print(repr(a) if len(repr(a)) < 100 else '[...]', end='')
     print()
@@ -98,11 +98,11 @@ def discrepancy(teacher, student, testcases, stop_at_first=False):
         try:
             r1 = canonize(teacher(*elem))
         except Exception as e:
-            r1 = f"CRASH! {e}"
+            r1 = f"TEACHER CRASH! {e}"
         try:
             r2 = canonize(student(*elem))
         except Exception as e:
-            r2 = f"CRASH! {e}"
+            r2 = f"STUDENT CRASH! {e}"
         if r1 != r2:
             disc += 1
             if (stop_at_first or shortest is None or
@@ -120,7 +120,7 @@ def discrepancy(teacher, student, testcases, stop_at_first=False):
             print(f"For {n} test cases, found {disc} discrepancies.")
             print("Shortest discrepancy input was:")
         emit_args(shortest)
-        print(f"Model  : {repr(d1)}")
+        print(f"Teacher: {repr(d1)}")
         print(f"Student: {repr(d2)}")
         return False
 
@@ -229,7 +229,7 @@ def test_all_functions(module, suite, recorder=None, known=None):
         print(f"\nRecording complete.")
     else:
         print(f"{count} out of {total} functions ", end="")
-        print(f"of {len(suite)} possible) work.")
+        print(f"of {len(suite)} possible work.")
     return count
 
 
@@ -274,7 +274,7 @@ def random_text_generator(seed, n=70):
             line += word
             if rng.randint(0, 99) < 20:
                 line += rng.choice(punct)
-        yield (line, )
+        yield (line,)
 
 
 # Create a random n-character string from the given alphabet.
@@ -1391,15 +1391,18 @@ def bulgarian_solitaire_generator(seed):
 
 def manhattan_skyline_generator(seed):
     rng = random.Random(seed)
-    for i in range(200):
+    scale = 1
+    for i in range(400):
         towers = []
-        w = i * i + 1
+        w = i * i + 5
         for k in range(i):
-            s = rng.randint(1, w)
-            e = s + rng.randint(1, w)
-            h = rng.randint(1, 100)
+            s = rng.randint(1, w) * scale
+            e = s + rng.randint(1, 3 * i + 1) * scale
+            h = rng.randint(1, 100) * scale
             towers.append((s, e, h))
         yield(towers,)
+        if i % 50 == 0:
+            scale *= 10
 
 
 def fractran_generator(seed):
@@ -1457,18 +1460,16 @@ def fractional_fit_generator(seed):
 
 def count_overlapping_disks_generator(seed):
     rng = random.Random(seed)
-    for n in range(3, 150):
-        d = 2 * n
-        for i in range(10):
-            disks = set()
-            while len(disks) < n:
-                x = rng.randint(-d, d)
-                y = rng.randint(-d, d)
-                r = rng.randint(1, n)
-                disks.add((x, y, r))
-            disks = list(disks)
-            disks.sort()
-            yield (disks,)
+    for n in range(1, 1000):
+        d = 10 * n
+        disks = set()
+        while len(disks) < n:
+            x = rng.randint(-d, d)
+            y = rng.randint(-d, d)
+            r = rng.randint(1, 10)
+            disks.add((x, y, r))
+        disks = list(disks)
+        yield (disks,)
 
 
 def sublist_with_mostest_generator(seed):
@@ -1784,8 +1785,46 @@ def permutation_cycles_generator(seed):
             rng.shuffle(perm)
             yield (perm,)
 
-# List of test cases for the 109 functions recognized here.
 
+def word_height_generator(seed):
+    rng = random.Random(seed)
+    with open('words_sorted.txt', 'r', encoding='utf-8') as f:
+        words = [x.strip() for x in f]
+    for i in range(5000):
+        idx = rng.randint(0, len(words) - 1)
+        yield (words, words[idx])
+
+
+def mcculloch_generator(seed):
+    rng = random.Random(seed)
+    for i in range(5000):
+        n = []
+        # Produce only digit strings that terminate.
+        for j in range(rng.randint(0, 7)):
+            n.append(rng.choice('345'))
+        n.append('2')
+        for j in range(rng.randint(1, 7)):
+            n.append(rng.choice('123456789'))
+        yield ("".join(n),)
+
+
+def trips_fill_generator(seed):
+    rng = random.Random(seed)
+    with open('words_sorted.txt', encoding="UTF-8") as f:
+        words3 = [word.strip() for word in f if len(word) == 4]
+    for i in range(200):
+        n, pat, c = 3 + i // 20, '', 0
+        for j in range(n):
+            if rng.randint(0, 99) < 100 - 15 * (c + 2):
+                pat += '*'
+                c += 1
+            else:
+                pat += rng.choice(rng.choice(words3))
+                c = 0
+        yield (words3, pat, [])
+
+
+# List of test cases for the 109 functions recognized here.
 
 testcases = [
     # The original 109 problems. These are not in order.
@@ -1804,7 +1843,7 @@ testcases = [
     (
      "count_overlapping_disks",
      count_overlapping_disks_generator(seed),
-     "18e8f5385fdc28a755dcad2167790f1177a3f4851760aa4285"
+     "b7316a06985f4231402869a69b52f969ee020c72e46a20af5f"
     ),
     (
      "fractional_fit",
@@ -1824,7 +1863,7 @@ testcases = [
     (
      "manhattan_skyline",
      manhattan_skyline_generator(seed),
-     "16609bdb523fae4ff85f8d36ffd1fcfa298bde94b95ca2917c"
+     "97b611f96bdbd878819b6ce6f4ca58af0db135db91b5a2a609"
     ),
     (
      "bulgarian_solitaire",
@@ -1934,11 +1973,12 @@ testcases = [
      count_growlers_generator(seed),
      "b7f1eb0877888b0263e3b2a923c9735a72347f4d817a0d38b1"
     ),
-    (
-     "kempner",
-     kempner_generator(),
-     "dfbf6a28719818c747e2c8e888ff853c2862fa8d99683c0815"
-    ),
+    # Removed from problem set August 10, 2020
+    # (
+    #  "kempner",
+    #  kempner_generator(),
+    #  "dfbf6a28719818c747e2c8e888ff853c2862fa8d99683c0815"
+    # ),
     (
      "words_with_letters",
      words_with_letters_generator(seed),
@@ -2137,11 +2177,12 @@ testcases = [
      words_with_given_shape_generator(seed),
      "96d697cd85e4effa24f659b83b18aa1adf14a1b9e14c02207b"
     ),
-    (
-     "prime_factors",
-     prime_factors_generator(seed),
-     "fbb31e68d216d7430c47a3e3ac9eb0d4240ef2ae698eb2ded4"
-    ),
+    # Removed from problem set August 10, 2020
+    # (
+    #  "prime_factors",
+    #  prime_factors_generator(seed),
+    #  "fbb31e68d216d7430c47a3e3ac9eb0d4240ef2ae698eb2ded4"
+    # ),
     (
      "fibonacci_sum",
      fibonacci_sum_generator(seed),
@@ -2189,11 +2230,12 @@ testcases = [
     # iterated_remove_pairs_generator(seed),
     # "f3d6588ec3c251abfc024698c2a7371dcc7e175af1e41bb0aa"
     # ),
-    (
-     "detab",
-     detab_generator(seed),
-     "7e1453906bc31dfb59159a377dcb7dbb8451e464b88bfd04b4"
-    ),
+    # Removed from problem set August 10, 2020
+    # (
+    #  "detab",
+    #  detab_generator(seed),
+    #  "7e1453906bc31dfb59159a377dcb7dbb8451e464b88bfd04b4"
+    # ),
     (
      "running_median_of_three",
      running_median_of_three_generator(seed),
@@ -2457,32 +2499,45 @@ testcases = [
      "permutation_cycles",
      permutation_cycles_generator(seed),
      "45ecf7be3ff5dbfa46a97ce660ee0484fc99baac36f55c8ad5"
+    ),
+    (
+     "word_height",
+     word_height_generator(seed),
+     "7d96c801d3a608d73c165d919e646d9e5a06efd6bf091ce5ba"
+    ),
+    (
+     "mcculloch",
+     mcculloch_generator(seed),
+     "43549317567a9c4fdd7acaa31c7684daef2c4f3b934ed63a3f"
+    ),
+    (
+     "trips_fill",
+     trips_fill_generator(seed),
+     "c3a71cefae41fc0a49ad32ef656c68535617ad67ee4743efac"
     )
 ]
+
 
 print(f"109 Python Problems tester, {version}, Ilkka Kokkarinen.")
 try:
     exec(f"import {studentfile} as labs109")
+    if os.path.exists(recordfile):
+        known, curr = dict(), ''
+        with gzip.open(recordfile, 'rt') as rf:
+            for line in rf:
+                line = line.strip()
+                if line.startswith('****'):
+                    curr = line[4:]
+                    known[curr] = []
+                else:
+                    known[curr].append(line)
+        # discrepancy(labs109.extract_increasing,
+        #             extract_increasing,
+        #             extract_increasing_generator(seed), False)
+        test_all_functions(labs109, testcases, known=known)
+    else:
+        with gzip.open(recordfile, 'wt') as rf:
+            test_all_functions(labs109, testcases, recorder=rf)
 except Exception as e:
     print(f"ERROR: Unable to import {studentfile}.py. Exiting...")
     print(f"{e}")
-    exit(1)
-
-
-# discrepancy(labs109.lattice_paths, lattice_paths,
-#             lattice_paths_generator(seed), False)
-
-if os.path.exists(recordfile):
-    known, curr = dict(), ''
-    with gzip.open(recordfile, 'rt') as rf:
-        for line in rf:
-            line = line.strip()
-            if line.startswith('****'):
-                curr = line[4:]
-                known[curr] = []
-            else:
-                known[curr].append(line)
-    test_all_functions(labs109, testcases, known = known)
-else:
-    with gzip.open(recordfile, 'wt') as rf:
-        test_all_functions(labs109, testcases, recorder = rf)
