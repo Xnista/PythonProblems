@@ -38,17 +38,18 @@ import os.path
 from math import sqrt
 
 # The release date of this version of the CCPS109 tester.
-version = "August 10, 2020"
+version = "August 11, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
 
 # How many test cases to record in the file for each function.
 testcase_cutoff = 300
+
 # Name of the file that contains the expected correct answers.
 recordfile = 'expected_answers'
 
-# Whether to use the recorded test results when they exist.
+# Whether to use the expected correct answers when they exist.
 use_record = True
 
 # Name of the module that contains the student solutions.
@@ -68,7 +69,7 @@ def canonize(result):
     return result
 
 
-# When reporting an error, make sure not to flood the user console.
+# When reporting an error, do not flood the user console.
 
 def emit_args(args, cutoff=100):
     for (i, a) in enumerate(args):
@@ -165,8 +166,8 @@ def test_one_function(f, testcases, expected=None, recorder=None, known=None):
                 print(f"DISCREPANCY AT TEST CASE #{count}: ")
                 print("TEST CASE: ", end="")
                 emit_args(test)
-                output = '...' if len(should_be) == 300 else ''
-                print(f"EXPECTED: {should_be} {output}")
+                trail = '...' if len(should_be) == 300 else ''
+                print(f"EXPECTED: {should_be} {trail}")
                 print(f"RETURNED: {sr}")
                 break
     if not recorder:
@@ -1684,7 +1685,7 @@ def spread_the_coins_generator(seed):
 
 def group_and_skip_generator(seed):
     rng = random.Random(seed)
-    for n in range(2000):
+    for n in range(1, 2000):
         b = rng.randint(1, 10)
         a = 2 * b + rng.randint(1, 10)
         yield (n*n, a, b)
@@ -2456,7 +2457,7 @@ testcases = [
     (
      "group_and_skip",
      group_and_skip_generator(seed),
-     "6f1dbf73dc63c5c0c2b5cebba4e2aa2e78da9c909e186ccfec"
+     "53ea5ca5bc8efee4d41805f0dd4c2629e780364f6891274896"
     ),
     (
      "nearest_polygonal_number",
