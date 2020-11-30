@@ -38,7 +38,7 @@ import os.path
 from math import sqrt
 
 # The release date of this version of the CCPS109 tester.
-version = "August 11, 2020"
+version = "November 30, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
@@ -211,9 +211,9 @@ def test_all_functions(module, suite, recorder=None, known=None):
     if recorder:
         print("RECORDING THE RESULTS OF THE IMPLEMENTED FUNCTIONS.")
         print("IF YOU ARE A STUDENT, YOU SHOULD NOT BE SEEING THIS")
-        print(f"MESSAGE! MAKE SURE THAT THE FILE {recordfile} FROM THE")
-        print("PLACE WHERE YOU DOWNLOADED THIS AUTOMATED TESTER IS")
-        print("PROPERLY DOWNLOADED INTO THIS SAME WORKING DIRECTORY!")
+        print(f"MESSAGE! MAKE SURE THAT THE FILE {recordfile} FROM")
+        print("WHERE YOU DOWNLOADED THIS AUTOMATED TESTER IS ALSO")
+        print("IN THIS SAME WORKING DIRECTORY!")
         print()
     count, total = 0, 0
     for (fname, testcases, expected) in sort_by_source(suite):
@@ -1824,7 +1824,20 @@ def trips_fill_generator(seed):
         yield (words3, pat, [])
 
 
+def is_left_handed_generator():
+    for a in range(1, 5):
+        for b in range(a + 1, 6):
+            for c in range(b + 1, 7):
+                if a+b != 7 and a+c != 7 and b+c != 7:
+                    yield ((a, b, c),)
+                    yield ((a, c, b),)
+                    yield ((b, a, c),)
+                    yield ((b, c, a),)
+                    yield ((c, a, b),)
+                    yield ((c, b, a),)
+
 # List of test cases for the 109 functions recognized here.
+
 
 testcases = [
     # The original 109 problems. These are not in order.
@@ -2236,11 +2249,12 @@ testcases = [
     #  detab_generator(seed),
     #  "7e1453906bc31dfb59159a377dcb7dbb8451e464b88bfd04b4"
     # ),
-    (
-     "running_median_of_three",
-     running_median_of_three_generator(seed),
-     "62d8c78ec1a5a7bdc9e30655380f59f59a64daacc8a272a29b"
-    ),
+    # Removed from problem set November 30, 2020
+    # (
+    #  "running_median_of_three",
+    #  running_median_of_three_generator(seed),
+    #  "62d8c78ec1a5a7bdc9e30655380f59f59a64daacc8a272a29b"
+    # ),
     (
      "frequency_sort",
      frequency_sort_generator(seed),
@@ -2514,6 +2528,11 @@ testcases = [
      "trips_fill",
      trips_fill_generator(seed),
      "c3a71cefae41fc0a49ad32ef656c68535617ad67ee4743efac"
+    ),
+    (
+     "is_left_handed",
+     is_left_handed_generator(),
+     "135b781680d9b5fbbc0815ab47ef2c0646ab7970a0b1bd0e9b"
     )
 ]
 
@@ -2531,9 +2550,9 @@ try:
                     known[curr] = []
                 else:
                     known[curr].append(line)
-        # discrepancy(labs109.extract_increasing,
-        #             extract_increasing,
-        #             extract_increasing_generator(seed), False)
+        # discrepancy(labs109.scylla_or_charybdis,
+        #             scylla_or_charybdis,
+        #             scylla_or_charybdis_generator(seed), False)
         test_all_functions(labs109, testcases, known=known)
     else:
         with gzip.open(recordfile, 'wt') as rf:
