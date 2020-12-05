@@ -38,7 +38,7 @@ import os.path
 from math import sqrt
 
 # The release date of this version of the CCPS109 tester.
-version = "November 30, 2020"
+version = "December 5, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
@@ -310,7 +310,7 @@ def is_ascending_generator(seed):
 def safe_squares_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
-        n = rng.randint(2, 20)
+        n = rng.randint(2, 3 + i // 50)
         pn = rng.randint(0, n * n - 3)
         pieces = []
         while len(pieces) < pn:
@@ -324,7 +324,7 @@ def safe_squares_generator(seed):
 def rooks_with_friends_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
-        n = rng.randint(2, 20)
+        n = rng.randint(2, 3 + i // 50)
         pn = rng.randint(0, 2 * n)
         pieces = []
         while len(pieces) < pn:
@@ -411,7 +411,7 @@ def reverse_ascending_sublists_generator(seed):
         for j in range(5):
             curr = []
             for k in range(i + 1):
-                curr.append(rng.randint(0, 2 * i))
+                curr.append(rng.randint(0, 2*i + k))
             yield (curr, )
 
 
@@ -691,10 +691,14 @@ def aliquot_sequence_generator():
         yield (i, 100)
 
 
-def josephus_generator():
+def josephus_generator(seed):
+    rng = random.Random(seed)
+    hop, skip = 1, 1
     for n in range(2, 100):
         for k in range(1, n):
-            yield (n, k)
+            yield (hop, skip)
+            skip += rng.randint(1, 2 + k)
+        hop += rng.randint(1, 3 + n // 20)
 
 
 def balanced_ternary_generator(seed):
@@ -721,9 +725,13 @@ def brangelina_generator():
 
 def frequency_sort_generator(seed):
     rng = random.Random(seed)
+    yield ([],)
     for i in range(1000):
-        n = 2 * i
-        elems = [rng.randint(1, 2 + n // 2) for x in range(n)]
+        items, curr = [], 1
+        for k in range(rng.randint(1, 3 + i//10)):
+            items.append(curr)
+            curr += rng.randint(1, 2 + curr // 20)
+        elems = [rng.choice(items) for x in range(1 + i // 30)]
         yield (elems,)
 
 
@@ -764,7 +772,7 @@ def is_perfect_power_generator(seed):
     for k in range(500):
         base = rng.randint(2, 3 + k // 20)
         exp = rng.randint(2, 3 + k // 20)
-        off = rng.randint(-1, 1)
+        off = rng.randint(-1, +1)
         yield (base ** exp - off, )
 
 
@@ -886,13 +894,14 @@ def lattice_paths_generator(seed):
     for i in range(1000):
         x = rng.randint(2, 3 + i // 40)
         y = rng.randint(2, 3 + i // 40)
-        tabu = []
+        tabu, tabus = [], set()
         n = rng.randint(1, max(1, x*y // 10))
         while len(tabu) < n:
             xx = rng.randint(0, x)
             yy = rng.randint(0, y)
-            if (xx, yy) not in tabu:
+            if (xx, yy) not in tabus:
                 tabu.append((xx, yy))
+                tabus.add((xx, yy))
         yield (x, y, tabu)
 
 
@@ -1065,10 +1074,10 @@ def autocorrect_word_generator(seed):
 
 def pyramid_blocks_generator(seed):
     n = 200
-    ns = it.islice(scale_random(seed, 3, 10), n)
-    ms = it.islice(scale_random(seed + 1, 3, 10), n)
-    hs = it.islice(scale_random(seed + 2, 2, 15), n)
-    yield from zip(ns, ms, hs)
+    ns = scale_random(seed, 3, 10)
+    ms = scale_random(seed + 1, 3, 10)
+    hs = scale_random(seed + 2, 2, 15)
+    yield from it.islice(zip(ns, ms, hs), n)
 
 
 def is_cyclops_generator(seed):
@@ -1159,9 +1168,14 @@ def count_maximal_layers_generator(seed):
 def taxi_zum_zum_generator(seed):
     rng = random.Random(seed)
     poss = ['L', 'R', 'F']
-    for i in range(1000):
-        moves = []
-        for j in range(i + 1):
+    moves = []
+    goal, count = 5, 0
+    for i in range(3000):
+        count += 1
+        if count == goal:
+            count, goal = 0, goal + 2
+            moves = []
+        else:
             moves.append(rng.choice(poss))
         yield (''.join(moves),)
 
@@ -1169,19 +1183,29 @@ def taxi_zum_zum_generator(seed):
 def count_growlers_generator(seed):
     rng = random.Random(seed)
     poss = ["cat", "tac", "dog", "god"]
-    for i in range(1000):
-        animals = []
-        for j in range(i + 1):
+    animals = []
+    goal, count = 5, 0
+    for i in range(5000):
+        count += 1
+        if count == goal:
+            count, goal = 0, goal + 2
+            animals = []
+        else:
             animals.append(rng.choice(poss))
         yield (animals,)
 
 
 def tukeys_ninthers_generator(seed):
     rng = random.Random(seed)
-    for i in range(200):
-        items = [x for x in range(3**(1 + i % 9))]
-        rng.shuffle(items)
+    n, items, goal, step = 0, [1], 1, 0
+    for i in range(1000):
         yield (items,)
+        step += 1
+        if step == goal:
+            step, goal = 0, goal * 3
+            n += 1
+            items = [x for x in range(3**n)]
+        rng.shuffle(items)
 
 
 def minimize_sum_generator(seed):
@@ -1348,9 +1372,13 @@ def forbidden_substrings_generator(seed):
 def count_dominators_generator(seed):
     rng = random.Random(seed)
     items = []
-    top = 10000
+    top, count, goal = 10000, 0, 10
     for i in range(top):
         yield (items[:],)
+        count += 1
+        if count == goal:
+            count, goal = 0, goal + 2
+            items = []
         items.append(rng.randint(1, 10 * (top - i)))
 
 
@@ -1392,16 +1420,16 @@ def bulgarian_solitaire_generator(seed):
 def manhattan_skyline_generator(seed):
     rng = random.Random(seed)
     scale = 1
-    for i in range(400):
+    for i in range(1000):
         towers = []
         w = i * i + 5
-        for k in range(i):
+        for k in range(3 + i // 10):
             s = rng.randint(1, w) * scale
             e = s + rng.randint(1, 3 * i + 1) * scale
             h = rng.randint(1, 100) * scale
             towers.append((s, e, h))
         yield(towers,)
-        if i % 50 == 0:
+        if i % 100 == 0:
             scale *= 10
 
 
@@ -1425,8 +1453,8 @@ def fractran_generator(seed):
 
 def scylla_or_charybdis_generator(seed):
     rng = random.Random(seed)
-    for n in range(2, 10):
-        for i in range(200):
+    for n in range(2, 40):
+        for i in range(2 * n):
             pos, result, = 0, ''
             for j in range(n * i):
                 if pos == n - 1:
@@ -1522,10 +1550,10 @@ def connected_islands_generator(seed):
 
 def cookie_generator(seed):
     rng = random.Random(seed)
-    for i in range(30):
-        items = [rng.randint(1, 50)]
-        for j in range(3 + i % 7):
-            items.append(items[-1] + rng.randint(1, 50))
+    for i in range(40):
+        items = [rng.randint(1, 2 + i)]
+        for j in range(3 + i // 7):
+            items.append(items[-1] + rng.randint(1, 2 + i))
         yield (items,)
 
 
@@ -1799,7 +1827,7 @@ def mcculloch_generator(seed):
     rng = random.Random(seed)
     for i in range(5000):
         n = []
-        # Produce only digit strings that terminate.
+        # Produce only digit strings whose evaluation terminates.
         for j in range(rng.randint(0, 7)):
             n.append(rng.choice('345'))
         n.append('2')
@@ -1810,7 +1838,7 @@ def mcculloch_generator(seed):
 
 def trips_fill_generator(seed):
     rng = random.Random(seed)
-    with open('words_sorted.txt', encoding="UTF-8") as f:
+    with open('words_sorted.txt', encoding='UTF-8') as f:
         words3 = [word.strip() for word in f if len(word) == 4]
     for i in range(200):
         n, pat, c = 3 + i // 20, '', 0
@@ -1866,7 +1894,7 @@ testcases = [
     (
      "scylla_or_charybdis",
      scylla_or_charybdis_generator(seed),
-     "ac773070f2e2a560e487aae218da4d37c287395865d0c44ec7"
+     "7d4accab714d3d2f539450f6fcb548f56352148244b0084c6d"
     ),
     (
      "fractran",
@@ -1876,7 +1904,7 @@ testcases = [
     (
      "manhattan_skyline",
      manhattan_skyline_generator(seed),
-     "97b611f96bdbd878819b6ce6f4ca58af0db135db91b5a2a609"
+     "3b3a7f389a8163b1582a80e97c1c93cc1a9d7e9ba4c12d22b6"
     ),
     (
      "bulgarian_solitaire",
@@ -1891,7 +1919,7 @@ testcases = [
     (
      "tukeys_ninthers",
      tukeys_ninthers_generator(seed),
-     "921de1acfc8f515bea0680f631bcdca4510d1e7957f3c1d0d1"
+     "fa223d090567ab5bb3d4f4ec7a84d5539e6ce6706f029920f7"
     ),
     (
      "optimal_crag_score",
@@ -1901,7 +1929,7 @@ testcases = [
     (
      "count_dominators",
      count_dominators_generator(seed),
-     "a45e1faffd22005c1cfdf148e73d039cee2ab187a9bd7bfad3"
+     "d91c356110374a44de0343f9520caab861b5e81efe4b423649"
     ),
     (
      "forbidden_substrings",
@@ -1916,7 +1944,7 @@ testcases = [
     (
      "taxi_zum_zum",
      taxi_zum_zum_generator(seed),
-     "2fb59c4b26bb42d777436fe2826e5faabf0139710d38569c8c"
+     "decec6801d0e4c4a717503a677e725b16cad906ab9ea349000"
     ),
     (
      "midnight",
@@ -1984,7 +2012,7 @@ testcases = [
     (
      "count_growlers",
      count_growlers_generator(seed),
-     "b7f1eb0877888b0263e3b2a923c9735a72347f4d817a0d38b1"
+     "8fc6f498724ce339a7c939088acf1c55fa87a44ab626083e97"
     ),
     # Removed from problem set August 10, 2020
     # (
@@ -2145,17 +2173,17 @@ testcases = [
     (
      "rooks_with_friends",
      rooks_with_friends_generator(seed),
-     "e9cdb7f319ce483f5196eaa17dcfbab5b01b75551830088a66"
+     "4869b8e0b678d18b9ed120ccef8aeed978b6632dab4c91d1e1"
     ),
     (
      "safe_squares_rooks",
      safe_squares_generator(seed),
-     "8a84bf052174d613f31b3e402be23ad58e64b51948990a7062"
+     "6d7b35b752d93f374941f962cbed35044a0f8e0d4dc2a6f751"
     ),
     (
      "safe_squares_bishops",
      safe_squares_generator(seed),
-     "e6b5cd8e52c82bd96c639cc11c7a6b431cc164ddeaf8e5d313"
+     "46d423a89c639e0113f40031ceb1efaf4971cdea7c36a9a7e7"
     ),
     # Removed from problem set April 20, 2020
     # (
@@ -2258,7 +2286,7 @@ testcases = [
     (
      "frequency_sort",
      frequency_sort_generator(seed),
-     "540f8b17005ed2cb3a40c49304eeb324e9aa0db81adf830bd0"
+     "d771e23013e19ecc14aa1dac27085fc1bf9f6316527e568934"
     ),
     (
      "count_consecutive_summers",
@@ -2277,8 +2305,8 @@ testcases = [
     ),
     (
      "josephus",
-     josephus_generator(),
-     "3ff6a944f6f48e41cc53a7013e785da77be27c7372b4a4cdbb"
+     josephus_generator(seed),
+     "d86c6d08ea783cc5ffe856f9181c9991667adc3dd5f9d40e8d"
     ),
     (
      "aliquot_sequence",
@@ -2340,7 +2368,7 @@ testcases = [
     (
      "reverse_ascending_sublists",
      reverse_ascending_sublists_generator(seed),
-     "b4cbb1ed5006364e68d8875e733abeec1241165d7b84402f62"
+     "99877453684bc3ba3448bb939239949ffab95500fdf6c50f22"
     ),
     (
      "reverse_reversed",
@@ -2416,7 +2444,7 @@ testcases = [
     (
      "cookie",
      cookie_generator(seed),
-     "ef5d2cc98a988383fdd167ac0ab2305312133dd57e9045cebe"
+     "a04728a718656fc5367a62a61494e5a3497a64b0c3f61b7d1f"
     ),
     (
      "eliminate_neighbours",
