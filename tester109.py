@@ -38,7 +38,7 @@ import os.path
 from math import sqrt
 
 # The release date of this version of the CCPS109 tester.
-version = "December 5, 2020"
+version = "December 6, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
@@ -209,7 +209,7 @@ def sort_by_source(suite):
 
 def test_all_functions(module, suite, recorder=None, known=None):
     if recorder:
-        print("RECORDING THE RESULTS OF THE IMPLEMENTED FUNCTIONS.")
+        print("RECORDING THE RESULTS OF INSTRUCTOR MODEL SOLUTIONS.")
         print("IF YOU ARE A STUDENT, YOU SHOULD NOT BE SEEING THIS")
         print(f"MESSAGE! MAKE SURE THAT THE FILE {recordfile} FROM")
         print("WHERE YOU DOWNLOADED THIS AUTOMATED TESTER IS ALSO")
@@ -908,9 +908,9 @@ def lattice_paths_generator(seed):
 def count_carries_generator(seed):
     rng = random.Random(seed)
     for i in range(1000):
-        b1 = rng.randint(2, 3 + i // 500)
+        b1 = rng.randint(2, 3 + i // 100)
         e1 = rng.randint(2, i + 3)
-        b2 = rng.randint(2, 3 + i // 500)
+        b2 = rng.randint(2, 3 + i // 100)
         e2 = rng.randint(2, i + 3)
         yield (b1**e1, b2**e2)
 
@@ -1192,14 +1192,14 @@ def count_growlers_generator(seed):
             animals = []
         else:
             animals.append(rng.choice(poss))
-        yield (animals,)
+        yield (animals[:],)
 
 
 def tukeys_ninthers_generator(seed):
     rng = random.Random(seed)
     n, items, goal, step = 0, [1], 1, 0
     for i in range(1000):
-        yield (items,)
+        yield (items[:],)
         step += 1
         if step == goal:
             step, goal = 0, goal * 3
@@ -2148,7 +2148,7 @@ testcases = [
     (
      "count_carries",
      count_carries_generator(seed),
-     "e48e0785704b40e82bc086e6edd86d55aa18fe9d017a6547e7"
+     "dd821d877c0d9dc5328720be97944c4d3cae5c4ab3617f9b2c"
     ),
     (
      "lattice_paths",
