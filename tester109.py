@@ -38,7 +38,7 @@ import os.path
 from math import sqrt
 
 # The release date of this version of the CCPS109 tester.
-version = "December 6, 2020"
+version = "December 10, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
@@ -278,6 +278,7 @@ def random_text_generator(seed, n=70):
 
 
 # Create a random n-character string from the given alphabet.
+
 def random_string(alphabet, n, rng):
     result = ''
     for i in range(n):
@@ -286,6 +287,16 @@ def random_string(alphabet, n, rng):
 
 
 # The test case generators for the individual functions.
+
+def brussels_choice_step_generator(seed):
+    rng = random.Random(seed)
+    for (i, n) in enumerate(it.islice(scale_random(seed, 2, 10), 2000)):
+        n += 10
+        nn = len(str(n))
+        a = rng.randint(1, nn)
+        b = rng.randint(1, nn)
+        yield (n, min(a, b), max(a, b))
+
 
 def ryerson_letter_grade_generator():
     for i in range(0, 150):
@@ -2076,11 +2087,12 @@ testcases = [
      seven_zero_generator(),
      "2cbae9ac1812d155ee34be3f908001b148bdf635109a38981e"
     ),
-    (
-     "count_distinct_sums_and_products",
-     count_distinct_sums_and_products_generator(seed),
-     "b75370cf5c3d2c307585937311af34e8a7ad44ea82c032786d"
-    ),
+    # Removed from problem set December 10, 2020
+    # (
+    #  "count_distinct_sums_and_products",
+    #  count_distinct_sums_and_products_generator(seed),
+    #  "b75370cf5c3d2c307585937311af34e8a7ad44ea82c032786d"
+    # ),
     (
      "sum_of_two_squares",
      sum_of_two_squares_generator(seed),
@@ -2561,6 +2573,11 @@ testcases = [
      "is_left_handed",
      is_left_handed_generator(),
      "135b781680d9b5fbbc0815ab47ef2c0646ab7970a0b1bd0e9b"
+    ),
+    (
+     "brussels_choice_step",
+     brussels_choice_step_generator(seed),
+     "612cb030aeb94ef5d84d8cb973d203fccae59260e5ae4a8055"
     )
 ]
 
