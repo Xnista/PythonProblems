@@ -38,7 +38,7 @@ import os.path
 from math import sqrt
 
 # The release date of this version of the CCPS109 tester.
-version = "December 10, 2020"
+version = "December 17, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
@@ -1875,6 +1875,26 @@ def is_left_handed_generator():
                     yield ((c, a, b),)
                     yield ((c, b, a),)
 
+
+def balanced_centrifuge_generator(seed):
+    rng = random.Random(seed)
+    for n in range(1, 1000):
+        k = 0
+        while k < n:
+            yield(n, k)
+            k += rng.randint(1, 3 + n // 30)
+
+
+def lunar_multiply_generator(seed):
+    for a in it.islice(scale_random(seed, 2, 3), 100):
+        for b in scale_random(seed + a, 2, 3):
+            if b > a:
+                break
+            else:
+                yield (a, b)
+                yield (b, a)
+
+
 # List of test cases for the 109 functions recognized here.
 
 
@@ -2320,11 +2340,12 @@ testcases = [
      josephus_generator(seed),
      "d86c6d08ea783cc5ffe856f9181c9991667adc3dd5f9d40e8d"
     ),
-    (
-     "aliquot_sequence",
-     aliquot_sequence_generator(),
-     "17f910bff400bb0305e94c79e27fda857c5723385d73f2ccc4"
-    ),
+    # Removed from problem set December 17, 2020
+    # (
+    #  "aliquot_sequence",
+    #  aliquot_sequence_generator(),
+    #  "17f910bff400bb0305e94c79e27fda857c5723385d73f2ccc4"
+    # ),
     # Removed from problem set April 20, 2020
     # (
     # "all_cyclic_shifts",
@@ -2478,11 +2499,12 @@ testcases = [
      next_zigzag_generator(seed),
      "52d66db24fc831dd08657f36e2e7b49ab788e6c86e8a25d3c5"
     ),
-    (
-     "md",
-     md_generator(seed),
-     "a1dcac70c093c0ba7fcfeae6d9d9655accb1cf871617f2a874"
-    ),
+    # Removed from problem set December 17, 2020
+    # (
+    #  "md",
+    #  md_generator(seed),
+    #  "a1dcac70c093c0ba7fcfeae6d9d9655accb1cf871617f2a874"
+    # ),
     (
      "wythoff_array",
      wythoff_array_generator(seed),
@@ -2578,6 +2600,16 @@ testcases = [
      "brussels_choice_step",
      brussels_choice_step_generator(seed),
      "612cb030aeb94ef5d84d8cb973d203fccae59260e5ae4a8055"
+    ),
+    (
+     "balanced_centrifuge",
+     balanced_centrifuge_generator(seed),
+     "a37b22d810035d549fc617cfe6cf72761bf9e199ad67a05485"
+    ),
+    (
+     "lunar_multiply",
+     lunar_multiply_generator(seed),
+     "411dfa9dc8637871c4a257df54043301308ec7c3c09ab8ac3c"
     )
 ]
 
