@@ -38,7 +38,7 @@ import os.path
 from math import sqrt
 
 # The release date of this version of the CCPS109 tester.
-version = "December 17, 2020"
+version = "December 24, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
@@ -1895,6 +1895,28 @@ def lunar_multiply_generator(seed):
                 yield (b, a)
 
 
+def oware_move_generator(seed):
+    rng = random.Random(seed)
+    k, goal = 2, 10
+    for i in range(5000):
+        to_sow = rng.randint(0, 6 * k * k * k * k)
+        sown = 0
+        board = [0 for _ in range(2 * k)]
+        while sown*sown < to_sow:
+            pos = rng.randint(0, 2 * k - 1)
+            board[pos] += 1
+            sown += 1
+        for house in range(k):
+            if board[house] > 0:
+                yield (board[:], house)
+        tall = rng.randint(0, k - 1)
+        board[tall] += 2 * k + rng.randint(2, 6 * k)
+        yield (board[:], tall)
+        if i == goal:
+            goal = goal * 10
+            k += 1
+
+
 # List of test cases for the 109 functions recognized here.
 
 
@@ -2429,11 +2451,12 @@ testcases = [
      is_ascending_generator(seed),
      "0ec304f7cd0d1b7a4460570947b05af1756a2510a5ba5ba9f1"
     ),
-    (
-     "double_until_all_digits",
-     double_until_all_digits_generator(),
-     "7c4ba46364765cb0679f609d428bbbae8ba0df440b001c4162"
-    ),
+    # Removed from problem set December 24, 2020
+    # (
+    #  "double_until_all_digits",
+    #  double_until_all_digits_generator(),
+    #  "7c4ba46364765cb0679f609d428bbbae8ba0df440b001c4162"
+    # ),
     (
      "give_change",
      give_change_generator(seed),
@@ -2610,6 +2633,11 @@ testcases = [
      "lunar_multiply",
      lunar_multiply_generator(seed),
      "411dfa9dc8637871c4a257df54043301308ec7c3c09ab8ac3c"
+    ),
+    (
+     "oware_move",
+     oware_move_generator(seed),
+     "f2059c85458029a78e570d44303a3255b312e49d15b68e8d2b"
     )
 ]
 
