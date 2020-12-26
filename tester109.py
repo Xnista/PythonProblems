@@ -38,7 +38,7 @@ import os.path
 from math import sqrt
 
 # The release date of this version of the CCPS109 tester.
-version = "December 24, 2020"
+version = "December 26, 2020"
 
 # Fixed seed used to generate pseudorandom numbers.
 seed = 12345
@@ -50,7 +50,7 @@ testcase_cutoff = 300
 recordfile = 'expected_answers'
 
 # Whether to use the expected correct answers when they exist.
-use_record = True
+use_record = False
 
 # Name of the module that contains the student solutions.
 studentfile = 'labs109'
@@ -1917,8 +1917,35 @@ def oware_move_generator(seed):
             k += 1
 
 
-# List of test cases for the 109 functions recognized here.
+__ar = ['amar', 'ayudar', 'bailar', 'cambiar', 'caminar', 'cantar',
+        'contestar', 'dejar', 'entrar', 'escuchar', 'esperar', 'expresar',
+        'ganar', 'gastar', 'hablar', 'lavar', 'limpiar', 'llamar',
+        'llegar', 'mandar', 'marchar', 'mirar', 'montar', 'nadar',
+        'olvidar', 'parar', 'preparar', 'quedar', 'tirar', 'tocar',
+        'tomar', 'trabajar', 'viajar']
+__er = ['absorber', 'aprender', 'barrer', 'beber', 'comer', 'comprender',
+        'conceder', 'correr', 'deber', 'meter', 'prender', 'poseer',
+        'romper', 'sorprender', 'temer', 'toser', 'vender']
+__ir = ['añadir', 'abrir', 'aplaudir', 'asistir', 'compartir', 'consumir',
+        'decidir', 'definir', 'describir', 'discutir', 'dividir', 'escribir',
+        'imprimir', 'insistir', 'persistir', 'prohibir', 'recibir',
+        'subir', 'vivir']
 
+
+def conjugate_regular_generator(seed):
+    rng = random.Random(seed)
+    verbs = __ar + __er + __ir
+    subjects = ['yo', 'tú', 'él', 'ella', 'usted', 'nosotros', 'nosotras',
+                'vosotros', 'vosotras', 'ellos', 'ellas', 'ustedes']
+    tenses = ['presente', 'pretérito', 'imperfecto', 'futuro']
+    for i in range(2000):
+        verb = rng.choice(verbs)
+        subject = rng.choice(subjects)
+        tense = rng.choice(tenses)
+        yield (verb, subject, tense)
+
+
+# List of test cases for the 109 functions recognized here.
 
 testcases = [
     # The original 109 problems. These are not in order.
@@ -2430,11 +2457,12 @@ testcases = [
      reverse_reversed_generator(seed),
      "d111344cdd8503a913181ffc7e46551b62a3dc2558a4b0fcbe"
     ),
-    (
-     "longest_palindrome",
-     longest_palindrome_generator(seed),
-     "565387607a574740217cfeef8a301c03dad2b29f0938e98ac4"
-    ),
+    # Removed from problem set December 26, 2020
+    # (
+    #  "longest_palindrome",
+    #  longest_palindrome_generator(seed),
+    #  "565387607a574740217cfeef8a301c03dad2b29f0938e98ac4"
+    # ),
     # Removed from problem set April 20, 2020
     # (
     # "group_equal",
@@ -2638,6 +2666,11 @@ testcases = [
      "oware_move",
      oware_move_generator(seed),
      "f2059c85458029a78e570d44303a3255b312e49d15b68e8d2b"
+    ),
+    (
+     "conjugate_regular",
+     conjugate_regular_generator(seed),
+     "47c2050686da89ca6b46e8f74aabd127dd5530bff468ad1fdf"
     )
 ]
 
